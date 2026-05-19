@@ -6,8 +6,11 @@
 <title>Timesheet Generator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -53,26 +56,12 @@
     margin-bottom: 40px;
   }
 
-  header .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent-mid);
-    margin-bottom: 10px;
-  }
-
   header h1 {
     font-family: var(--font-head);
     font-size: 34px;
     font-weight: 300;
     color: var(--ink);
     line-height: 1.15;
-  }
-
-  header h1 em {
-    font-style: italic;
-    color: var(--accent);
   }
 
   header p.sub {
@@ -187,8 +176,6 @@
     margin-bottom: 16px;
   }
 
-  .field-row.single { grid-template-columns: 1fr; }
-  .field-row.triple { grid-template-columns: 1fr 1fr 1fr; }
   .field-row.quad { grid-template-columns: 1fr 1fr 1fr 1fr; }
 
   label {
@@ -200,7 +187,7 @@
     letter-spacing: 0.03em;
   }
 
-  input[type=text], input[type=number], input[type=time], select {
+  input[type=text], input[type=number], input[type=time] {
     width: 100%;
     padding: 10px 14px;
     border: 1px solid var(--border-strong);
@@ -213,7 +200,7 @@
     transition: border-color 0.15s, box-shadow 0.15s;
   }
 
-  input[type=text]:focus, input[type=number]:focus, select:focus {
+  input[type=text]:focus, input[type=number]:focus {
     border-color: var(--accent-mid);
     box-shadow: 0 0 0 3px rgba(74,124,94,0.15);
   }
@@ -319,12 +306,6 @@
     font-weight: 500;
   }
 
-  .result-card .meta {
-    font-size: 12px;
-    color: var(--ink-muted);
-    font-family: var(--font-mono);
-  }
-
   .dl-btn {
     padding: 7px 16px;
     border: 1px solid var(--accent);
@@ -417,19 +398,9 @@
 
   .sheet-card ul li::before { content: '· '; color: var(--ink-faint); }
 
-  /* ---- PRINT / PDF STYLES ---- */
-  #print-frame {
-    position: fixed;
-    left: -9999px;
-    top: 0;
-    width: 1px;
-    height: 1px;
-    border: none;
-  }
-
   /* ---- RESPONSIVE ---- */
   @media (max-width: 560px) {
-    .field-row, .field-row.triple, .field-row.quad { grid-template-columns: 1fr; }
+    .field-row, .field-row.quad { grid-template-columns: 1fr; }
     .month-grid { grid-template-columns: repeat(4, 1fr); }
     .sheet-guide { grid-template-columns: 1fr; }
     header h1 { font-size: 26px; }
@@ -442,10 +413,9 @@
 
   <header>
     <h1>Monthly Timesheet Generator</h1>
-    <p class="sub">Upload your roster Excel file, select the period, and download print-ready PDF timesheets for each clinician.</p>
+    <p class="sub">Upload your roster Excel file, select the period, and download print-ready PDFs directly.</p>
   </header>
 
-  <!-- STEP 1: UPLOAD -->
   <div class="section" id="step-upload">
     <div class="section-label">Step 1 — Excel file</div>
     <h2>Upload Roster Data</h2>
@@ -497,12 +467,9 @@
     </div>
   </div>
 
-  <!-- STEP 2: PERIOD -->
   <div class="section" id="step-period">
     <div class="section-label">Step 2 — Hospital & Period</div>
     <h2>Select Hospital & Reporting Period</h2>
-    <p class="hint">Choose the hospital name, the year, and which months to generate. You can select multiple months — a timesheet will be created for each clinician for each selected month.</p>
-
     <div class="field-row">
       <div>
         <label for="hospital-input">Hospital Name</label>
@@ -531,12 +498,9 @@
     </div>
   </div>
 
-  <!-- STEP 3: BASE HOURS -->
   <div class="section" id="step-hours">
     <div class="section-label">Step 3 — Base Working Hours</div>
     <h2>Set Standard Hours</h2>
-    <p class="hint">Define the default start, end, and meal times for clinicians. This overrides Excel values.</p>
-
     <div class="field-row quad">
       <div>
         <label for="base-start">Start Time</label>
@@ -554,7 +518,6 @@
         <label for="post-call-time">Post-call Time</label>
         <input type="time" id="post-call-time" value="13:00">
       </div>
-
     </div>
 
     <div style="margin-top: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
@@ -582,14 +545,12 @@
     </div>
   </div>
 
-  <!-- STEP 4: GENERATE -->
   <div class="section">
     <div class="section-label">Step 4 — Generate</div>
     <h2>Create Timesheets</h2>
-    <p class="hint">Once ready, click below to process all clinicians for the selected period. Each timesheet will open in a new tab ready to print as PDF.</p>
 
     <button class="generate-btn" id="gen-btn" onclick="runGeneration()">
-      Generate timesheets →
+      Generate PDF Timesheets →
     </button>
 
     <div class="progress-bar" id="progress-bar">
@@ -599,16 +560,13 @@
     <div class="log-box" id="log-box"></div>
 
     <div id="results-section" style="display:none; margin-top:24px;">
-      <div class="section-label">Generated timesheets</div>
+      <div class="section-label">Generated PDF Timesheets</div>
       <div class="results-grid" id="results-grid"></div>
-      <button class="dl-all-btn" onclick="openAll()">Open all timesheets for printing</button>
-      <button class="dl-all-btn" id="dl-all-pdf-btn" onclick="downloadAllPDFs()" style="background: var(--surface); margin-top:8px;">Download all as PDFs</button>
+      <button class="dl-all-btn" id="dl-all-pdf-btn" onclick="downloadAllPDFs()" style="margin-top:16px;">Download All (Zip/Multiple)</button>
     </div>
   </div>
 
 </div>
-
-<iframe id="print-frame"></iframe>
 
 <script>
 // ============================================================
@@ -616,7 +574,7 @@
 // ============================================================
 let workbook = null;
 let selectedMonths = new Set();
-let generatedTimesheets = []; // {name, month, year, html}
+let generatedTimesheets = []; // Stores pure JSON data for jsPDF generation
 
 const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
 const SHORT_MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -645,8 +603,7 @@ function loadFile(file) {
   reader.onload = evt => {
     try {
       workbook = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
-      document.getElementById('file-name-badge').innerHTML =
-        `<div class="file-badge">✓ ${file.name}</div>`;
+      document.getElementById('file-name-badge').innerHTML = `<div class="file-badge">✓ ${file.name}</div>`;
       log(`Loaded: ${file.name} (${workbook.SheetNames.join(', ')})`, 'ok');
       showLog();
     } catch(e) {
@@ -658,7 +615,7 @@ function loadFile(file) {
 }
 
 // ============================================================
-// MONTH SELECTOR
+// MONTH SELECTOR & UI
 // ============================================================
 document.querySelectorAll('.month-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -678,9 +635,6 @@ function toggleFridayHours() {
   document.getElementById('friday-hours-row').style.display = isChecked ? 'grid' : 'none';
 }
 
-// ============================================================
-// LOGGING
-// ============================================================
 function log(msg, type='dim') {
   const box = document.getElementById('log-box');
   const p = document.createElement('p');
@@ -690,9 +644,7 @@ function log(msg, type='dim') {
   box.scrollTop = box.scrollHeight;
 }
 
-function showLog() {
-  document.getElementById('log-box').classList.add('visible');
-}
+function showLog() { document.getElementById('log-box').classList.add('visible'); }
 
 function setProgress(pct) {
   document.getElementById('progress-bar').classList.add('visible');
@@ -700,7 +652,7 @@ function setProgress(pct) {
 }
 
 // ============================================================
-// HELPERS — matching Python originals
+// HELPERS
 // ============================================================
 function toHHMMSS(decimalHours) {
   if (!decimalHours || isNaN(decimalHours) || decimalHours === 0) return '';
@@ -711,13 +663,9 @@ function toHHMMSS(decimalHours) {
 }
 
 function parseTimeValue(val) {
-  // val may be a JS Date object (from cellDates:true) or a number (Excel fraction)
   if (val == null || val === '') return 0.0;
-  if (val instanceof Date) {
-    return val.getHours() + val.getMinutes()/60 + val.getSeconds()/3600;
-  }
+  if (val instanceof Date) return val.getHours() + val.getMinutes()/60 + val.getSeconds()/3600;
   if (typeof val === 'number') {
-    // Excel time fraction: 0.5 = 12:00
     const totalSeconds = Math.round(val * 86400);
     const h = Math.floor(totalSeconds / 3600);
     const min = Math.floor((totalSeconds % 3600) / 60);
@@ -732,9 +680,7 @@ function parseTimeValue(val) {
 
 function formatExcelTime(val) {
   if (val == null || val === '') return '';
-  if (val instanceof Date) {
-    return `${String(val.getHours()).padStart(2,'0')}:${String(val.getMinutes()).padStart(2,'0')}`;
-  }
+  if (val instanceof Date) return `${String(val.getHours()).padStart(2,'0')}:${String(val.getMinutes()).padStart(2,'0')}`;
   if (typeof val === 'number') {
     const totalSeconds = Math.round(val * 86400);
     const h = Math.floor(totalSeconds / 3600) % 24;
@@ -745,40 +691,14 @@ function formatExcelTime(val) {
 }
 
 function toDateKey(d) {
-  // Returns YYYY-MM-DD string for a JS Date
   if (!d) return null;
-  if (d instanceof Date) {
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }
+  if (d instanceof Date) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   return null;
 }
 
-function sheetToObjects(sheet) {
-  return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
-}
-
-function sheetToObjectsRaw(sheet) {
-  return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
-}
-
-function daysInMonth(year, month) {
-  return new Date(year, month, 0).getDate();
-}
-
-function weekday(year, month, day) {
-  // 0=Mon ... 6=Sun
-  const d = new Date(year, month-1, day).getDay();
-  return d === 0 ? 6 : d - 1;
-}
-
-function isWeekend(year, month, day) {
-  const w = weekday(year, month, day);
-  return w >= 5;
-}
-
-function isFriday(year, month, day) {
-  return weekday(year, month, day) === 4;
-}
+function sheetToObjectsRaw(sheet) { return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true }); }
+function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); }
+function weekday(year, month, day) { const d = new Date(year, month-1, day).getDay(); return d === 0 ? 6 : d - 1; }
 
 // ============================================================
 // EXCEL DATA PARSING
@@ -789,21 +709,14 @@ function parseWorkbook(wb) {
   const rosterRows  = sheetToObjectsRaw(wb.Sheets['Call Roster']);
   const holidayRows = sheetToObjectsRaw(wb.Sheets['Public Holidays']);
 
-  // --- Clinicians (skip header row 0) ---
   const clinicians = [];
   for (let i = 1; i < persalRows.length; i++) {
     const r = persalRows[i];
     const name = r[0];
     if (!name || String(name).trim() === '') continue;
-    clinicians.push({
-      name:       String(name).trim(),
-      persal:     r[3],
-      rank:       r[4],
-      apptDate:   r[6],
-    });
+    clinicians.push({ name: String(name).trim(), persal: r[3], rank: r[4], apptDate: r[6] });
   }
 
-  // --- Public Holidays: Set of date strings YYYY-MM-DD ---
   const holidays = new Set();
   for (let i = 1; i < holidayRows.length; i++) {
     const cell = holidayRows[i][0];
@@ -811,7 +724,6 @@ function parseWorkbook(wb) {
     let dateStr = null;
     if (cell instanceof Date) { dateStr = toDateKey(cell); }
     else if (typeof cell === 'number') {
-      // Excel serial date
       const d = XLSX.SSF.parse_date_code(cell);
       if (d) dateStr = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
     } else if (typeof cell === 'string') {
@@ -820,29 +732,26 @@ function parseWorkbook(wb) {
     if (dateStr) holidays.add(dateStr);
   }
 
-  // --- Leave: array of {name, type, startDate, endDate} ---
   const leaveRecords = [];
   for (let i = 1; i < leaveRows.length; i++) {
     const r = leaveRows[i];
     if (!r[0]) continue;
     leaveRecords.push({
-      name:      String(r[0]).trim(),
-      type:      String(r[1] || '').trim(),
+      name: String(r[0]).trim(),
+      type: String(r[1] || '').trim(),
       startDate: parseDateCell(r[2]),
-      endDate:   parseDateCell(r[3]),
+      endDate: parseDateCell(r[3]),
     });
   }
 
-  // --- Roster: array of {date, otStart, otEnd, onCall:[name,name,name], standby:name} ---
   const rosterEntries = [];
   for (let i = 1; i < rosterRows.length; i++) {
     const r = rosterRows[i];
     if (!r[0]) continue;
     rosterEntries.push({
-      date:    parseDateCell(r[0]),
-      otStart: r[2],
-      otEnd:   r[3],
-      onCall:  [r[4], r[5], r[6]].map(v => v ? String(v).trim() : null).filter(Boolean),
+      date: parseDateCell(r[0]),
+      otStart: r[2], otEnd: r[3],
+      onCall: [r[4], r[5], r[6]].map(v => v ? String(v).trim() : null).filter(Boolean),
       standby: r[7] ? String(r[7]).trim() : null,
     });
   }
@@ -865,12 +774,12 @@ function parseDateCell(cell) {
 }
 
 // ============================================================
-// CORE TIMESHEET GENERATION (mirrors Python logic)
+// DATA GENERATION (Returns JSON Object, NO HTML)
 // ============================================================
-function generateTimesheet(clinician, year, month, data, hospitalName, config) {
+function generateTimesheetData(clinician, year, month, data, hospitalName, config) {
   const { holidays, leaveRecords, rosterEntries } = data;
   const totalDays = daysInMonth(year, month);
-  const firstDayWeekday = weekday(year, month, 1); // Mon=0
+  const firstDayWeekday = weekday(year, month, 1);
 
   const normalStart = config.start || '07:30';
   const normalEnd   = config.end || '16:30';
@@ -888,24 +797,15 @@ function generateTimesheet(clinician, year, month, data, hospitalName, config) {
   const daysData = [];
   let grandBase = 0, grandOnsite = 0, grandOffsite = 0;
   const weeklyTotals = Array.from({length:6}, () => ({base:0, onsite:0, offsite:0}));
-  const leaveTracker = {
-    'Annual Leave': 0,
-    'Sick Leave': 0,
-    'Family Responsibility Leave': 0,
-    'Other': 0
-  };
+  const leaveTracker = { 'Annual Leave': 0, 'Sick Leave': 0, 'Family Responsibility Leave': 0, 'Other': 0 };
 
-  // Build fast lookup maps
-  const holidaySet = holidays; // already a Set of YYYY-MM-DD strings
-
-  const leaveMap = {}; // name -> [{type, startDate, endDate}]
+  const leaveMap = {};
   leaveRecords.forEach(lr => {
     if (!leaveMap[lr.name]) leaveMap[lr.name] = [];
     leaveMap[lr.name].push(lr);
   });
 
-  // roster by date string
-  const rosterMap = {}; // dateStr -> [entry, ...]
+  const rosterMap = {};
   rosterEntries.forEach(re => {
     if (!re.date) return;
     const ds = toDateKey(re.date);
@@ -916,284 +816,232 @@ function generateTimesheet(clinician, year, month, data, hospitalName, config) {
   for (let day = 1; day <= totalDays; day++) {
     const dateObj = new Date(year, month-1, day);
     const dateStr = toDateKey(dateObj);
-    const dow = weekday(year, month, day); // 0=Mon 4=Fri 5=Sat 6=Sun
+    const dow = weekday(year, month, day); 
     const isWknd = dow >= 5;
     const isFri  = dow === 4;
     const weekIndex = Math.floor((day - 1 + firstDayWeekday) / 7);
 
-    const dayLabel = dateObj.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', weekday:'short' })
-      .replace(',', ' -');
+    const dayLabel = dateObj.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', weekday:'short' }).replace(',', ' -');
 
-    let status = '';
-    let isPubHol = false;
-
+    let status = '', isPubHol = false;
     let dailyBase = isFri ? fridayHrs : (isWknd ? 0 : normalHrs);
     let baseStart = isWknd ? '' : (isFri ? friStart : normalStart);
     let baseEnd   = isWknd ? '' : (isFri ? friEnd : normalEnd);
     let baseMeal  = isWknd ? '' : (isFri ? friMeal : normalMeal);
     
-    if (baseMeal === '00:00') baseMeal = ''; // Clean up printing
+    if (baseMeal === '00:00') baseMeal = '';
 
-    // 1. Public holiday?
-    if (holidaySet.has(dateStr)) {
-      status = 'Public Holiday';
-      isPubHol = true;
-      dailyBase = 0;
-      baseStart = baseEnd = baseMeal = '';
+    if (holidays.has(dateStr)) {
+      status = 'Public Holiday'; isPubHol = true; dailyBase = 0; baseStart = baseEnd = baseMeal = '';
     }
 
-    // 2. Leave?
     const cliLeave = leaveMap[clinician.name] || [];
     for (const lr of cliLeave) {
       if (!lr.startDate || !lr.endDate) continue;
       const startKey = toDateKey(lr.startDate);
       const endKey   = toDateKey(lr.endDate);
       if (dateStr >= startKey && dateStr <= endKey) {
-        status = lr.type;
-        dailyBase = 0;
-        baseStart = baseEnd = baseMeal = '';
-        if (!isWknd) {
-          const lk = leaveTracker.hasOwnProperty(lr.type) ? lr.type : 'Other';
-          leaveTracker[lk]++;
-        }
+        status = lr.type; dailyBase = 0; baseStart = baseEnd = baseMeal = '';
+        if (!isWknd) { const lk = leaveTracker.hasOwnProperty(lr.type) ? lr.type : 'Other'; leaveTracker[lk]++; }
         break;
       }
     }
 
-    // 3. Overtime / call roster
     const todayRoster = rosterMap[dateStr] || [];
-    let dailyOnsite = 0, dailyOffsite = 0;
-    let otStartStr = '', otEndStr = '';
+    let dailyOnsite = 0, dailyOffsite = 0, otStartStr = '', otEndStr = '';
 
     for (const re of todayRoster) {
-      const dur = (() => {
-        let s = parseTimeValue(re.otStart);
-        let e = parseTimeValue(re.otEnd);
-        let d = e - s;
-        if (d < 0) d += 24;
-        return d;
-      })();
-
+      let dur = parseTimeValue(re.otEnd) - parseTimeValue(re.otStart);
+      if (dur < 0) dur += 24;
       if (re.onCall.includes(clinician.name)) {
-        dailyOnsite += dur;
-        otStartStr = formatExcelTime(re.otStart);
-        otEndStr   = formatExcelTime(re.otEnd);
+        dailyOnsite += dur; otStartStr = formatExcelTime(re.otStart); otEndStr = formatExcelTime(re.otEnd);
       } else if (re.standby === clinician.name) {
-        dailyOffsite += dur / 3;
-        otStartStr = formatExcelTime(re.otStart);
-        otEndStr   = formatExcelTime(re.otEnd);
+        dailyOffsite += dur / 3; otStartStr = formatExcelTime(re.otStart); otEndStr = formatExcelTime(re.otEnd);
       }
     }
 
-    // 4. Post-call logic
     const yesterday = new Date(year, month-1, day-1);
-    const yesterdayStr = toDateKey(yesterday);
-    const yesterdayRoster = rosterMap[yesterdayStr] || [];
+    const yesterdayRoster = rosterMap[toDateKey(yesterday)] || [];
     let postCallToday = false;
 
     for (const re of yesterdayRoster) {
-      if (re.onCall.includes(clinician.name)) {
-        const endH = parseTimeValue(re.otEnd);
-        if (endH < 12) { postCallToday = true; break; }
-      }
+      if (re.onCall.includes(clinician.name) && parseTimeValue(re.otEnd) < 12) { postCallToday = true; break; }
     }
 
     if (postCallToday && status === '' && !isWknd && !isPubHol) {
       const postCallEndVal = isFri ? friPostCallTime : postCallTime;
-      baseEnd  = formatExcelTime(postCallEndVal);
-      baseMeal = '';
-      status   = 'Post Call';
-      const endH = parseTimeValue(postCallEndVal);
+      baseEnd = formatExcelTime(postCallEndVal); baseMeal = ''; status = 'Post Call';
       const startH = parseTimeValue(isFri ? friStart : normalStart);
+      const endH = parseTimeValue(postCallEndVal);
       dailyBase = endH > startH ? endH - startH : 0;
     }
 
-    // Accumulate totals
-    grandBase    += dailyBase;
-    grandOnsite  += dailyOnsite;
-    grandOffsite += dailyOffsite;
-
+    grandBase += dailyBase; grandOnsite += dailyOnsite; grandOffsite += dailyOffsite;
     const wi = Math.min(weekIndex, 5);
-    weeklyTotals[wi].base   += dailyBase;
-    weeklyTotals[wi].onsite  += dailyOnsite;
-    weeklyTotals[wi].offsite += dailyOffsite;
+    weeklyTotals[wi].base += dailyBase; weeklyTotals[wi].onsite += dailyOnsite; weeklyTotals[wi].offsite += dailyOffsite;
 
     const otActive = dailyOnsite > 0 || dailyOffsite > 0;
 
     if (isWknd || isPubHol) {
       daysData.push({
-        day: dayLabel, isWeekend: isWknd, isHighlighted: false,
-        status: status || (otActive ? 'On-Call' : ''),
-        start:  otActive ? otStartStr : '',
-        end:    otActive ? otEndStr   : '',
-        meal:   '',
-        base:   toHHMMSS(dailyBase),
-        onSite: toHHMMSS(dailyOnsite),
-        offSite:toHHMMSS(dailyOffsite),
+        day: dayLabel, isWeekend: isWknd, isHighlighted: false, status: status || (otActive ? 'On-Call' : ''),
+        start: otActive ? otStartStr : '', end: otActive ? otEndStr : '', meal: '',
+        base: toHHMMSS(dailyBase), onSite: toHHMMSS(dailyOnsite), offSite: toHHMMSS(dailyOffsite),
       });
     } else {
       daysData.push({
-        day: dayLabel, isWeekend: false, isHighlighted: false,
-        status, start: baseStart, end: baseEnd, meal: baseMeal,
+        day: dayLabel, isWeekend: false, isHighlighted: false, status, start: baseStart, end: baseEnd, meal: baseMeal,
         base: toHHMMSS(dailyBase), onSite: '', offSite: '',
       });
-
       if (otActive) {
         daysData.push({
-          day: '', isWeekend: false, isHighlighted: true,
-          status: 'On-Call', start: otStartStr, end: otEndStr,
-          meal: '', base: '', onSite: toHHMMSS(dailyOnsite), offSite: toHHMMSS(dailyOffsite),
+          day: '', isWeekend: false, isHighlighted: true, status: 'On-Call', start: otStartStr, end: otEndStr, meal: '',
+          base: '', onSite: toHHMMSS(dailyOnsite), offSite: toHHMMSS(dailyOffsite),
         });
       }
     }
   }
 
-  // Format weekly totals
-  const weeklyFormatted = weeklyTotals.map((w, i) => ({
-    label:   `Week ${i+1}`,
-    base:    toHHMMSS(w.base),
-    onsite:  toHHMMSS(w.onsite),
-    offsite: toHHMMSS(w.offsite),
-    baseVal: w.base, onsiteVal: w.onsite, offsiteVal: w.offsite,
-  }));
+  const weeklyFormatted = weeklyTotals
+    .map((w, i) => ({ label: `Week ${i+1}`, base: toHHMMSS(w.base), onsite: toHHMMSS(w.onsite), offsite: toHHMMSS(w.offsite), baseVal: w.base, onsiteVal: w.onsite, offsiteVal: w.offsite }))
+    .filter(w => w.baseVal > 0 || w.onsiteVal > 0 || w.offsiteVal > 0);
 
-  const leaveString = Object.entries(leaveTracker)
-    .filter(([,v]) => v > 0)
-    .map(([k,v]) => `${k}: ${v} day${v!==1?'s':''}`)
-    .join(', ');
-
+  const leaveString = Object.entries(leaveTracker).filter(([,v]) => v > 0).map(([k,v]) => `${k}: ${v} day${v!==1?'s':''}`).join(', ');
   const startDateStr = `01/${String(month).padStart(2,'0')}/${year}`;
-  const endDay = daysInMonth(year, month);
-  const endDateStr   = `${endDay}/${String(month).padStart(2,'0')}/${year}`;
+  const endDateStr = `${daysInMonth(year, month)}/${String(month).padStart(2,'0')}/${year}`;
 
-  return renderTimesheetHTML({
+  return {
     clinicianName: clinician.name,
-    rank:          clinician.rank || '',
-    clinicianId:   clinician.persal || '',
-    hospitalName:  hospitalName,
-    startDate:     startDateStr,
-    endDate:       endDateStr,
-    daysData,
-    weeklyData:    weeklyFormatted,
-    grandBase:     toHHMMSS(grandBase),
-    grandOvertime: toHHMMSS(grandOnsite + grandOffsite),
-    grandTotal:    toHHMMSS(grandBase + grandOnsite + grandOffsite),
-    leaveString,
-  });
+    rank: clinician.rank || '',
+    clinicianId: clinician.persal || '',
+    hospitalName, startDateStr, endDateStr,
+    daysData, weeklyData: weeklyFormatted, leaveString,
+    grandBase: toHHMMSS(grandBase), grandOvertime: toHHMMSS(grandOnsite + grandOffsite), grandTotal: toHHMMSS(grandBase + grandOnsite + grandOffsite)
+  };
 }
 
 // ============================================================
-// HTML TEMPLATE (mirrors the Python Jinja2 template)
+// PDF GENERATION (Using jsPDF and autotable)
 // ============================================================
-function renderTimesheetHTML(d) {
-  const rowsHTML = d.daysData.map(row => {
-    const cls = (row.isWeekend ? 'weekend' : '') + (row.isHighlighted ? ' highlight' : '');
-    return `<tr class="${cls}">
-      <td>${row.day}</td>
-      <td>${row.status}</td>
-      <td>${row.start}</td>
-      <td>${row.end}</td>
-      <td>${row.meal}</td>
-      <td>${row.base}</td>
-      <td>${row.onSite}</td>
-      <td>${row.offSite}</td>
-    </tr>`;
-  }).join('');
+function buildPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'pt', 'a4'); // A4 dimensions: 595.28 x 841.89 points
+  const margin = 40;
+  let cursorY = margin;
 
-  const weekRowsHTML = d.weeklyData
-    .filter(w => w.baseVal > 0 || w.onsiteVal > 0 || w.offsiteVal > 0)
-    .map(w => `<tr>
-      <td>${w.label}</td><td>${w.base}</td><td>${w.onsite}</td><td>${w.offsite}</td>
-    </tr>`).join('');
+  // 1. HEADER
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(`${data.clinicianName} — Timesheet — ${data.hospitalName}`, margin, cursorY);
+  
+  cursorY += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`Rank: ${data.rank}   |   Persal #: ${data.clinicianId}   |   Period: ${data.startDateStr} to ${data.endDateStr}`, margin, cursorY);
+  
+  cursorY += 10;
+  doc.setLineWidth(1.5);
+  doc.line(margin, cursorY, 595.28 - margin, cursorY);
+  
+  cursorY += 15;
 
-  const leaveBoxHTML = d.leaveString
-    ? `<div class="leave-box"><strong>Leave Summary:</strong> ${d.leaveString}</div>`
-    : '';
+  // 2. MAIN DAYS TABLE
+  doc.autoTable({
+    startY: cursorY,
+    head: [['Day', 'Status', 'Start Time', 'End Time', 'Meal Break', 'Base Hours', '1st On Call', 'Standby']],
+    body: data.daysData.map(d => [d.day, d.status, d.start, d.end, d.meal, d.base, d.onSite, d.offSite]),
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5 },
+    headStyles: { fillColor: [239, 239, 239], textColor: [34, 34, 34], fontStyle: 'bold', halign: 'center' },
+    bodyStyles: { halign: 'center' },
+    columnStyles: { 0: { halign: 'left', cellWidth: 75 } },
+    didParseCell: function(info) {
+      if (info.section === 'body') {
+        const rowData = data.daysData[info.row.index];
+        if (rowData.isHighlighted) { info.cell.styles.fillColor = [255, 248, 220]; }
+        else if (rowData.isWeekend) { info.cell.styles.fillColor = [242, 242, 242]; }
+      }
+    }
+  });
 
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>${d.clinicianName} — ${d.startDate} Timesheet</title>
-<style>
-  @page { size: A4 portrait; margin: 8mm; }
-  * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 8pt; color: #222; background: #fff; margin: 0; }
-  .header { width: 100%; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 8px; }
-  .header h1 { font-size: 14pt; margin: 0 0 3px 0; }
-  .header p { margin: 2px 0; font-size: 8pt; }
-  table { width: 100%; border-collapse: collapse; font-size: 7pt; text-align: center; margin-bottom: 5px; }
-  th, td { border: 1px solid #aaa; padding: 3px 4px; }
-  th { background-color: #f0f0f0; font-weight: bold; }
-  .weekend { background-color: #bfbfbf; }
-  .highlight { background-color: #fff3cd; }
-  .summary-container { display: flex; gap: 10px; margin-bottom: 5px; page-break-inside: avoid; }
-  .summary-box { flex: 1; border-collapse: collapse; }
-  .summary-box th { background-color: #e0e0e0; }
-  .leave-box { margin-top: 8px; padding: 8px; background: #f9f9f9; border: 1px solid #ccc; font-size: 7.5pt; page-break-inside: avoid; }
-  .sign-box { display: table; width: 100%; margin-top: 10px; padding: 8px; background: #f9f9f9; border: 1px solid #ccc; page-break-inside: avoid; }
-  .sign-block { display: table-cell; width: 33.33%; padding: 0 8px; text-align: center; vertical-align: bottom; }
-  .sign-line { border-bottom: 1px solid #000; height: 28px; margin-bottom: 4px; }
-  .sign-label { font-weight: bold; font-size: 7.5pt; }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  cursorY = doc.lastAutoTable.finalY + 20;
+
+  // Handle page break before summaries if close to bottom
+  if (cursorY > 700) {
+    doc.addPage();
+    cursorY = margin;
   }
-</style>
-</head>
-<body>
-  <div class="header">
-    <h1>${d.clinicianName} — Timesheet — ${d.hospitalName}</h1>
-    <p><strong>Rank:</strong> ${d.rank} &nbsp;|&nbsp; <strong>Persal #:</strong> ${d.clinicianId} &nbsp;|&nbsp; <strong>Period:</strong> ${d.startDate} to ${d.endDate}</p>
-  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Day</th>
-        <th>Status</th>
-        <th>Start Time</th>
-        <th>End Time</th>
-        <th>Meal Break</th>
-        <th>Base Hours</th>
-        <th>1st On Call</th>
-        <th>Standby</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHTML}</tbody>
-  </table>
+  // 3. SUMMARIES (Weekly & Monthly Side-by-Side)
+  const halfWidth = (595.28 - (margin * 2) - 15) / 2;
 
-  <div class="summary-container">
-    <table class="summary-box">
-      <tr><th colspan="4">Weekly Totals</th></tr>
-      <tr><th>Week</th><th>Base</th><th>1st On Call</th><th>Standby</th></tr>
-      ${weekRowsHTML}
-    </table>
-    <table class="summary-box">
-      <tr><th colspan="2">Monthly Totals</th></tr>
-      <tr><td>Total Base Hours</td><td>${d.grandBase}</td></tr>
-      <tr><td>Total Overtime</td><td>${d.grandOvertime}</td></tr>
-      <tr><td><strong>Grand Total Hours</strong></td><td><strong>${d.grandTotal}</strong></td></tr>
-    </table>
-  </div>
+  // Weekly Totals
+  doc.autoTable({
+    startY: cursorY,
+    margin: { left: margin },
+    tableWidth: halfWidth,
+    head: [[{ content: 'Weekly Totals', colSpan: 4, styles: { halign: 'center', fillColor: [230, 230, 230] } }], ['Week', 'Base', '1st On Call', 'Standby']],
+    body: data.weeklyData.map(w => [w.label, w.base, w.onsite, w.offsite]),
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5, halign: 'center' },
+    headStyles: { textColor: [34, 34, 34], fontStyle: 'bold' }
+  });
 
-  ${leaveBoxHTML}
+  const weeklyFinalY = doc.lastAutoTable.finalY;
 
-  <div class="sign-box">
-    <div class="sign-block">
-      <div class="sign-line"></div>
-      <div class="sign-label">Employee</div>
-    </div>
-    <div class="sign-block">
-      <div class="sign-line"></div>
-      <div class="sign-label">Certified Correct by Clinical Supervisor</div>
-    </div>
-    <div class="sign-block">
-      <div class="sign-line"></div>
-      <div class="sign-label">Approved by CEO / Medical Superintendent</div>
-    </div>
-  </div>
-</body>
-</html>`;
+  // Monthly Totals
+  doc.autoTable({
+    startY: cursorY,
+    margin: { left: margin + halfWidth + 15 },
+    tableWidth: halfWidth,
+    head: [[{ content: 'Monthly Totals', colSpan: 2, styles: { halign: 'center', fillColor: [230, 230, 230] } }]],
+    body: [
+      ['Total Base Hours', data.grandBase],
+      ['Total Overtime', data.grandOvertime],
+      [{ content: 'Grand Total Hours', styles: { fontStyle: 'bold' } }, { content: data.grandTotal, styles: { fontStyle: 'bold' } }]
+    ],
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5 },
+    headStyles: { textColor: [34, 34, 34], fontStyle: 'bold' }
+  });
+
+  cursorY = Math.max(weeklyFinalY, doc.lastAutoTable.finalY) + 15;
+
+  // 4. LEAVE BOX
+  if (data.leaveString) {
+    if (cursorY > 750) { doc.addPage(); cursorY = margin; }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setFillColor(247, 247, 247);
+    doc.setDrawColor(208, 208, 208);
+    doc.rect(margin, cursorY, 595.28 - (margin * 2), 20, 'FD');
+    doc.text(`Leave Summary: ${data.leaveString}`, margin + 5, cursorY + 13);
+    cursorY += 35;
+  }
+
+  // 5. SIGNATURES
+  if (cursorY > 750) { doc.addPage(); cursorY = margin; }
+  cursorY += 40; // Spacing for lines
+
+  const colWidth = (595.28 - (margin * 2)) / 3;
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(0, 0, 0);
+  doc.setFontSize(8);
+
+  const sig1X = margin;
+  const sig2X = margin + colWidth;
+  const sig3X = margin + (colWidth * 2);
+  const lineLen = colWidth - 20;
+
+  // Lines
+  doc.line(sig1X, cursorY, sig1X + lineLen, cursorY);
+  doc.line(sig2X, cursorY, sig2X + lineLen, cursorY);
+  doc.line(sig3X, cursorY, sig3X + lineLen, cursorY);
+
+  cursorY += 12;
+  // Labels
+  doc.text('Employee', sig1X + (lineLen/2), cursorY, { align: 'center' });
+  doc.text('Certified Correct by Clinical Supervisor', sig2X + (lineLen/2), cursorY, { align: 'center' });
+  doc.text('Approved by CEO / Medical Superintendent', sig3X + (lineLen/2), cursorY, { align: 'center' });
+
+  return doc;
 }
 
 // ============================================================
@@ -1257,29 +1105,25 @@ async function runGeneration() {
   for (const month of months) {
     for (const clinician of data.clinicians) {
       try {
-        const html = generateTimesheet(clinician, year, month, data, hospitalName, config);
+        const tsData = generateTimesheetData(clinician, year, month, data, hospitalName, config);
         generatedTimesheets.push({
-          name: clinician.name,
-          month,
-          year,
           label: `${clinician.name} — ${MONTH_NAMES[month]} ${year}`,
-          filename: `${clinician.name} - ${String(month).padStart(2,'0')}-${year} Timesheet.html`,
-          html
+          filename: `${clinician.name} - ${String(month).padStart(2,'0')}-${year} Timesheet.pdf`,
+          data: tsData
         });
         done++;
         setProgress(Math.round(5 + (done/total)*90));
-        log(`✓ ${clinician.name} — ${MONTH_NAMES[month]}`, 'ok');
+        log(`✓ ${clinician.name} — ${MONTH_NAMES[month]} ready`, 'ok');
       } catch(e) {
-        log(`✗ ${clinician.name} — ${MONTH_NAMES[month]}: ${e.message}`, 'err');
+        log(`✗ ${clinician.name} — ${MONTH_NAMES[month]} failed: ${e.message}`, 'err');
         done++;
       }
-      // Yield to keep UI responsive
-      await new Promise(r => setTimeout(r, 0));
+      await new Promise(r => setTimeout(r, 0)); // Yield to keep UI responsive
     }
   }
 
   setProgress(100);
-  log(`Batch complete — ${generatedTimesheets.length} timesheets generated`, 'info');
+  log(`Batch complete — ${generatedTimesheets.length} ready to download`, 'info');
   renderResults();
   document.getElementById('gen-btn').disabled = false;
 }
@@ -1293,8 +1137,7 @@ function renderResults() {
     card.className = 'result-card';
     card.innerHTML = `
       <div class="name">${ts.label}</div>
-      <button class="dl-btn" onclick="openTimesheet(${i})">Open / Print</button>
-      <button class="dl-btn" onclick="downloadHTML(${i})">↓ HTML</button>
+      <button class="dl-btn" onclick="downloadPDF(${i})">↓ Download PDF</button>
     `;
     grid.appendChild(card);
   });
@@ -1302,57 +1145,31 @@ function renderResults() {
   document.getElementById('results-section').style.display = 'block';
 }
 
-function openTimesheet(index) {
+function downloadPDF(index) {
   const ts = generatedTimesheets[index];
-  const win = window.open('', '_blank');
-  win.document.write(ts.html);
-  win.document.close();
-}
-
-function downloadHTML(index) {
-  const ts = generatedTimesheets[index];
-  const blob = new Blob([ts.html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = ts.filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function openAll() {
-  generatedTimesheets.forEach((_, i) => {
-    setTimeout(() => openTimesheet(i), i * 300);
-  });
+  try {
+    const doc = buildPDF(ts.data);
+    doc.save(ts.filename);
+  } catch(e) {
+    log(`Error saving PDF: ${e.message}`, 'err');
+  }
 }
 
 async function downloadAllPDFs() {
   const btn = document.getElementById('dl-all-pdf-btn');
-  const originalText = btn.textContent;
   btn.disabled = true;
+  btn.textContent = 'Downloading... (Check your browser downloads)';
+  log('Starting mass download...', 'info');
 
   for (let i = 0; i < generatedTimesheets.length; i++) {
-    const ts = generatedTimesheets[i];
-    btn.textContent = `Generating PDF ${i + 1} of ${generatedTimesheets.length}...`;
-    
-    const opt = {
-      margin:       8,
-      filename:     ts.filename.replace('.html', '.pdf'),
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    
-    try {
-      await html2pdf().set(opt).from(ts.html).save();
-    } catch(e) {
-      log(`Error creating PDF for ${ts.name}: ${e.message}`, 'err');
-    }
+    downloadPDF(i);
+    // Slight delay to prevent browser throttling multi-downloads
+    await new Promise(r => setTimeout(r, 200)); 
   }
 
-  btn.textContent = originalText;
+  log('All PDFs triggered for download.', 'ok');
   btn.disabled = false;
-  log('Finished downloading all PDFs', 'ok');
+  btn.textContent = 'Download All (Zip/Multiple)';
 }
 </script>
 
