@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timesheet Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f2eb;
+    --surface: #fdfbf7;
+    --ink: #1a1914;
+    --ink-muted: #6b6860;
+    --ink-faint: #a8a59e;
+    --accent: #2d5a3d;
+    --accent-light: #e8f0ea;
+    --accent-mid: #4a7c5e;
+    --warn: #8b4513;
+    --warn-light: #fdf0e8;
+    --border: rgba(26,25,20,0.12);
+    --border-strong: rgba(26,25,20,0.22);
+    --radius: 8px;
+    --radius-lg: 14px;
+    --font-head: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ---- LAYOUT ---- */
+  .shell {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  header {
+    padding: 48px 0 36px;
+    border-bottom: 1px solid var(--border-strong);
+    margin-bottom: 40px;
+  }
+
+  header h1 {
+    font-family: var(--font-head);
+    font-size: 34px;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1.15;
+  }
+
+  header p.sub {
+    margin-top: 10px;
+    color: var(--ink-muted);
+    font-size: 14px;
+    font-weight: 300;
+  }
+
+  /* ---- SECTIONS ---- */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    margin-bottom: 20px;
+  }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section h2 {
+    font-family: var(--font-head);
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .section p.hint {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  /* ---- UPLOAD ZONE ---- */
+  .upload-zone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    background: var(--accent-light);
+    border-color: var(--accent-mid);
+  }
+
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .upload-zone .upload-text {
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+
+  .upload-zone .upload-text strong {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid rgba(45,90,61,0.2);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    margin-top: 12px;
+  }
+
+  /* ---- FORM FIELDS ---- */
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .field-row.quad { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
+  }
+
+  input[type=text], input[type=number], input[type=time] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  input[type=text]:focus, input[type=number]:focus {
+    border-color: var(--accent-mid);
+    box-shadow: 0 0 0 3px rgba(74,124,94,0.15);
+  }
+
+  /* ---- MONTH PICKER ---- */
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .month-btn {
+    padding: 8px 4px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    color: var(--ink-muted);
+    transition: all 0.12s;
+    user-select: none;
+  }
+
+  .month-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-mid); }
+
+  .month-btn.selected {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* ---- GENERATE BUTTON ---- */
+  .generate-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-head);
+    font-size: 17px;
+    font-weight: 300;
+    font-style: italic;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 8px;
+  }
+
+  .generate-btn:hover { background: var(--accent-mid); }
+  .generate-btn:active { transform: scale(0.99); }
+  .generate-btn:disabled { background: var(--ink-faint); cursor: not-allowed; }
+
+  /* ---- LOG / STATUS ---- */
+  .log-box {
+    background: #1a1914;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.8;
+    max-height: 260px;
+    overflow-y: auto;
+    color: #a8c5a0;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .log-box.visible { display: block; }
+
+  .log-line { margin: 0; }
+  .log-line.ok { color: #7ec88a; }
+  .log-line.err { color: #e27b7b; }
+  .log-line.info { color: #7ab3d4; }
+  .log-line.dim { color: #5a5850; }
+
+  /* ---- RESULTS ---- */
+  .results-grid {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .result-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.15s;
+  }
+
+  .result-card:hover { border-color: var(--border-strong); }
+
+  .result-card .name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .dl-btn {
+    padding: 7px 16px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s, color 0.12s;
+  }
+
+  .dl-btn:hover { background: var(--accent); color: #fff; }
+
+  .dl-all-btn {
+    margin-top: 12px;
+    padding: 11px 20px;
+    border: 1.5px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.12s;
+  }
+
+  .dl-all-btn:hover { background: var(--accent); color: #fff; }
+
+  /* ---- PROGRESS ---- */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .progress-bar.visible { display: block; }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  /* ---- SHEET GUIDE ---- */
+  .sheet-guide {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .sheet-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--bg);
+  }
+
+  .sheet-card .sheet-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-mid);
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sheet-card .sheet-name::before {
+    content: '⬛';
+    font-size: 8px;
+    color: var(--accent);
+  }
+
+  .sheet-card ul {
+    list-style: none;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.9;
+  }
+
+  .sheet-card ul li::before { content: '· '; color: var(--ink-faint); }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 560px) {
+    .field-row, .field-row.quad { grid-template-columns: 1fr; }
+    .month-grid { grid-template-columns: repeat(4, 1fr); }
+    .sheet-guide { grid-template-columns: 1fr; }
+    header h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header>
+    <h1>Monthly Timesheet Generator</h1>
+    <p class="sub">Upload your roster Excel file, select the period, and download print-ready PDFs and monthly reporting spreadsheets.</p>
+  </header>
+
+  <div class="section" id="step-upload">
+    <div class="section-label">Step 1 — Excel file</div>
+    <h2>Upload Roster Data</h2>
+    <p class="hint">Upload your <strong>'Overtime spreadsheet'.xlsx</strong> file. It must contain four sheets: Persal Details, Leave Schedule, Call Roster, and Public Holidays.</p>
+
+    <div class="upload-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".xlsx,.xls">
+      <span class="upload-icon">📂</span>
+      <div class="upload-text"><strong>Click to browse</strong> or drag and drop here</div>
+      <div class="upload-text" style="font-size:12px; margin-top:4px;">Accepts .xlsx files only</div>
+      <div id="file-name-badge"></div>
+    </div>
+
+    <div class="sheet-guide">
+      <div class="sheet-card">
+        <div class="sheet-name">Persal Details</div>
+        <ul>
+          <li>Col A — Full name</li>
+          <li>Col B — Persal number</li>
+          <li>Col C — Job title / rank</li>
+          <li>Col D — Appointment date</li>
+          <li>Col E - Nature of Appointment</li>
+          <li>Col F — Overtime Group</li>
+          <li>Col G - Contract End <i> (for contract/CSMOs, otherwise N/A)</i></li>
+          
+        </ul>
+      </div>
+      <div class="sheet-card">
+        <div class="sheet-name">Leave Schedule</div>
+        <ul>
+          <li>Col A — Name</li>
+          <li>Col B — Leave type <i> (Annual, Sick, Family Responsibility, Special) </i></li>
+          <li>Col C — Start date</li>
+          <li>Col D — End date</li>
+        </ul>
+      </div>
+      <div class="sheet-card">
+        <div class="sheet-name">Call Roster</div>
+        <ul>
+          <li>Col A — Date</li>
+          <li>Col C — OT start time</li>
+          <li>Col D — OT end time</li>
+          <li>Col E/F/G — On-call names</li>
+          <li>Col H — Standby name</li>
+        </ul>
+      </div>
+      <div class="sheet-card">
+        <div class="sheet-name">Public Holidays</div>
+        <ul>
+          <li>Col A — Holiday date</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="step-period">
+    <div class="section-label">Step 2 — Hospital & Period</div>
+    <h2>Select Hospital & Reporting Period</h2>
+    <div class="field-row">
+      <div>
+        <label for="hospital-input">Hospital Name</label>
+        <input type="text" id="hospital-input" value="Madwaleni District Hospital">
+      </div>
+      <div>
+        <label for="year-input">Year</label>
+        <input type="number" id="year-input" value="2026" min="2020" max="2035">
+      </div>
+    </div>
+
+    <label>Months</label>
+    <div class="month-grid">
+      <div class="month-btn" data-month="1">Jan</div>
+      <div class="month-btn" data-month="2">Feb</div>
+      <div class="month-btn" data-month="3">Mar</div>
+      <div class="month-btn" data-month="4">Apr</div>
+      <div class="month-btn" data-month="5">May</div>
+      <div class="month-btn" data-month="6">Jun</div>
+      <div class="month-btn" data-month="7">Jul</div>
+      <div class="month-btn" data-month="8">Aug</div>
+      <div class="month-btn" data-month="9">Sep</div>
+      <div class="month-btn" data-month="10">Oct</div>
+      <div class="month-btn" data-month="11">Nov</div>
+      <div class="month-btn" data-month="12">Dec</div>
+    </div>
+  </div>
+
+  <div class="section" id="step-hours">
+    <div class="section-label">Step 3 — Base Working Hours</div>
+    <h2>Set Standard Hours</h2>
+    <div class="field-row quad">
+      <div>
+        <label for="base-start">Start Time</label>
+        <input type="time" id="base-start" value="07:30">
+      </div>
+      <div>
+        <label for="base-end">End Time</label>
+        <input type="time" id="base-end" value="16:30">
+      </div>
+      <div>
+        <label for="base-meal">Meal Break</label>
+        <input type="time" id="base-meal" value="00:30">
+      </div>
+      <div>
+        <label for="post-call-time">Post-call Time</label>
+        <input type="time" id="post-call-time" value="13:00">
+      </div>
+    </div>
+
+    <div style="margin-top: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="friday-diff-check" onchange="toggleFridayHours()" checked>
+      <label for="friday-diff-check" style="margin: 0; font-size: 14px; color: var(--ink); font-weight: normal;">Friday is different</label>
+    </div>
+
+    <div class="field-row quad" id="friday-hours-row">
+      <div>
+        <label for="fri-start">Friday Start Time</label>
+        <input type="time" id="fri-start" value="07:30">
+      </div>
+      <div>
+        <label for="fri-end">Friday End Time</label>
+        <input type="time" id="fri-end" value="13:30">
+      </div>
+      <div>
+        <label for="fri-meal">Friday Meal Break</label>
+        <input type="time" id="fri-meal" value="00:00">
+      </div>
+      <div>
+        <label for="fri-post-call-time">Post-call Time</label>
+        <input type="time" id="fri-post-call-time" value="11:30">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Step 4 — Generate</div>
+    <h2>Create Timesheets</h2>
+
+    <button class="generate-btn" id="gen-btn" onclick="runGeneration()">
+      Generate PDF Timesheets →
+    </button>
+
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="log-box" id="log-box"></div>
+
+    <div id="results-section" style="display:none; margin-top:24px;">
+      <div class="section-label">Generated PDF Timesheets</div>
+      <div class="results-grid" id="results-grid"></div>
+      <button class="dl-all-btn" id="dl-all-pdf-btn" onclick="downloadAllPDFs()" style="margin-top:16px;">Download All (Zip/Multiple)</button>
+    </div>
+  </div>
+
+  <div class="section" id="step-reporting">
+    <div class="section-label">Step 5 — Reporting Tool</div>
+    <h2>Export Monthly Reporting Spreadsheets</h2>
+    <p class="hint">Generates one <strong>.xlsx file per selected month</strong> matching the COT Monitoring Tool format — with each doctor's weekly normal hours and overtime, monthly totals, leave, and Persal details. Generate timesheets first (Step 4), then click below.</p>
+
+    <button class="generate-btn" id="report-btn" onclick="runReportingExport()" style="background: var(--accent-mid);">
+      Export Reporting Tool Excel(s) →
+    </button>
+
+    <div id="report-results-section" style="display:none; margin-top:24px;">
+      <div class="section-label">Generated Reporting Spreadsheets</div>
+      <div class="results-grid" id="report-results-grid"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// GLOBALS
+// ============================================================
+let workbook = null;
+let selectedMonths = new Set();
+let generatedTimesheets = []; // Stores pure JSON data for jsPDF generation
+
+const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+const SHORT_MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ============================================================
+// FILE UPLOAD
+// ============================================================
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      workbook = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
+      document.getElementById('file-name-badge').innerHTML = `<div class="file-badge">✓ ${file.name}</div>`;
+      log(`Loaded: ${file.name} (${workbook.SheetNames.join(', ')})`, 'ok');
+      showLog();
+    } catch(e) {
+      log(`Error reading file: ${e.message}`, 'err');
+      showLog();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ============================================================
+// MONTH SELECTOR & UI
+// ============================================================
+document.querySelectorAll('.month-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const m = parseInt(btn.dataset.month);
+    if (selectedMonths.has(m)) {
+      selectedMonths.delete(m);
+      btn.classList.remove('selected');
+    } else {
+      selectedMonths.add(m);
+      btn.classList.add('selected');
+    }
+  });
+});
+
+function toggleFridayHours() {
+  const isChecked = document.getElementById('friday-diff-check').checked;
+  document.getElementById('friday-hours-row').style.display = isChecked ? 'grid' : 'none';
+}
+
+function log(msg, type='dim') {
+  const box = document.getElementById('log-box');
+  const p = document.createElement('p');
+  p.className = `log-line ${type}`;
+  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.appendChild(p);
+  box.scrollTop = box.scrollHeight;
+}
+
+function showLog() { document.getElementById('log-box').classList.add('visible'); }
+
+function setProgress(pct) {
+  document.getElementById('progress-bar').classList.add('visible');
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function toHHMMSS(decimalHours) {
+  if (!decimalHours || isNaN(decimalHours) || decimalHours === 0) return '';
+  let h = Math.floor(decimalHours);
+  let m = Math.round((decimalHours - h) * 60);
+  if (m === 60) { h++; m = 0; }
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
+}
+
+function parseTimeValue(val) {
+  if (val == null || val === '') return 0.0;
+  if (val instanceof Date) return val.getHours() + val.getMinutes()/60 + val.getSeconds()/3600;
+  if (typeof val === 'number') {
+    const totalSeconds = Math.round(val * 86400);
+    const h = Math.floor(totalSeconds / 3600);
+    const min = Math.floor((totalSeconds % 3600) / 60);
+    return h + min/60;
+  }
+  if (typeof val === 'string') {
+    const parts = val.split(':');
+    if (parts.length >= 2) return parseInt(parts[0]) + parseInt(parts[1])/60;
+  }
+  return 0.0;
+}
+
+function formatExcelTime(val) {
+  if (val == null || val === '') return '';
+  if (val instanceof Date) return `${String(val.getHours()).padStart(2,'0')}:${String(val.getMinutes()).padStart(2,'0')}`;
+  if (typeof val === 'number') {
+    const totalSeconds = Math.round(val * 86400);
+    const h = Math.floor(totalSeconds / 3600) % 24;
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+  return String(val);
+}
+
+function toDateKey(d) {
+  if (!d) return null;
+  if (d instanceof Date) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return null;
+}
+
+function sheetToObjectsRaw(sheet) { return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true }); }
+function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); }
+function weekday(year, month, day) { const d = new Date(year, month-1, day).getDay(); return d === 0 ? 6 : d - 1; }
+
+// ============================================================
+// EXCEL DATA PARSING
+// ============================================================
+function parseWorkbook(wb) {
+  const persalRows  = sheetToObjectsRaw(wb.Sheets['Persal Details']);
+  const leaveRows   = sheetToObjectsRaw(wb.Sheets['Leave Schedule']);
+  const rosterRows  = sheetToObjectsRaw(wb.Sheets['Call Roster']);
+  const holidayRows = sheetToObjectsRaw(wb.Sheets['Public Holidays']);
+
+  const clinicians = [];
+  for (let i = 1; i < persalRows.length; i++) {
+    const r = persalRows[i];
+    const name = r[0];
+    if (!name || String(name).trim() === '') continue;
+    clinicians.push({ name: String(name).trim(), persal: r[1], rank: r[2], apptDate: r[3], apptNature: r[4], overtimegroup: r[5], contractEnd: r[6]});
+  }
+
+  const holidays = new Set();
+  for (let i = 1; i < holidayRows.length; i++) {
+    const cell = holidayRows[i][0];
+    if (!cell) continue;
+    let dateStr = null;
+    if (cell instanceof Date) { dateStr = toDateKey(cell); }
+    else if (typeof cell === 'number') {
+      const d = XLSX.SSF.parse_date_code(cell);
+      if (d) dateStr = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+    } else if (typeof cell === 'string') {
+      dateStr = cell.substring(0,10);
+    }
+    if (dateStr) holidays.add(dateStr);
+  }
+
+  const leaveRecords = [];
+  for (let i = 1; i < leaveRows.length; i++) {
+    const r = leaveRows[i];
+    if (!r[0]) continue;
+    leaveRecords.push({
+      name: String(r[0]).trim(),
+      type: String(r[1] || '').trim(),
+      startDate: parseDateCell(r[2]),
+      endDate: parseDateCell(r[3]),
+    });
+  }
+
+  const rosterEntries = [];
+  for (let i = 1; i < rosterRows.length; i++) {
+    const r = rosterRows[i];
+    if (!r[0]) continue;
+    rosterEntries.push({
+      date: parseDateCell(r[0]),
+      otStart: r[2], otEnd: r[3],
+      onCall: [r[4], r[5], r[6]].map(v => v ? String(v).trim() : null).filter(Boolean),
+      standby: r[7] ? String(r[7]).trim() : null,
+    });
+  }
+
+  return { clinicians, holidays, leaveRecords, rosterEntries };
+}
+
+function parseDateCell(cell) {
+  if (!cell) return null;
+  if (cell instanceof Date) return cell;
+  if (typeof cell === 'number') {
+    const d = XLSX.SSF.parse_date_code(cell);
+    if (d) return new Date(d.y, d.m-1, d.d);
+  }
+  if (typeof cell === 'string') {
+    const parts = cell.substring(0,10).split('-');
+    if (parts.length === 3) return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  }
+  return null;
+}
+
+// ============================================================
+// DATA GENERATION (Returns JSON Object, NO HTML)
+// ============================================================
+function generateTimesheetData(clinician, year, month, data, hospitalName, config) {
+  const { holidays, leaveRecords, rosterEntries } = data;
+  const totalDays = daysInMonth(year, month);
+  const firstDayWeekday = weekday(year, month, 1);
+
+  const normalStart = config.start || '07:30';
+  const normalEnd   = config.end || '16:30';
+  const normalMeal  = config.meal || '00:30';
+  const normalHrs   = Math.max(0, parseTimeValue(normalEnd) - parseTimeValue(normalStart) - parseTimeValue(normalMeal));
+
+  const friStart = config.friDiff ? (config.friStart || '07:30') : normalStart;
+  const friEnd   = config.friDiff ? (config.friEnd || '13:30') : normalEnd;
+  const friMeal  = config.friDiff ? (config.friMeal || '00:00') : normalMeal;
+  const fridayHrs = Math.max(0, parseTimeValue(friEnd) - parseTimeValue(friStart) - parseTimeValue(friMeal));
+
+  const postCallTime = config.postCallTime || '13:00';
+  const friPostCallTime = config.friDiff ? (config.friPostCallTime || '11:30') : postCallTime;
+
+  const daysData = [];
+  let grandBase = 0, grandOnsite = 0, grandOffsite = 0;
+  const weeklyTotals = Array.from({length:6}, () => ({base:0, onsite:0, offsite:0}));
+  const leaveTracker = { 'Annual Leave': 0, 'Sick Leave': 0, 'Family Responsibility Leave': 0, 'Other': 0 };
+
+  const leaveMap = {};
+  leaveRecords.forEach(lr => {
+    if (!leaveMap[lr.name]) leaveMap[lr.name] = [];
+    leaveMap[lr.name].push(lr);
+  });
+
+  const rosterMap = {};
+  rosterEntries.forEach(re => {
+    if (!re.date) return;
+    const ds = toDateKey(re.date);
+    if (!rosterMap[ds]) rosterMap[ds] = [];
+    rosterMap[ds].push(re);
+  });
+
+  for (let day = 1; day <= totalDays; day++) {
+    const dateObj = new Date(year, month-1, day);
+    const dateStr = toDateKey(dateObj);
+    const dow = weekday(year, month, day); 
+    const isWknd = dow >= 5;
+    const isFri  = dow === 4;
+    const weekIndex = Math.floor((day - 1 + firstDayWeekday) / 7);
+
+    const dayLabel = dateObj.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', weekday:'short' }).replace(',', ' -');
+
+    let status = '', isPubHol = false;
+    let dailyBase = isFri ? fridayHrs : (isWknd ? 0 : normalHrs);
+    let baseStart = isWknd ? '' : (isFri ? friStart : normalStart);
+    let baseEnd   = isWknd ? '' : (isFri ? friEnd : normalEnd);
+    let baseMeal  = isWknd ? '' : (isFri ? friMeal : normalMeal);
+    
+    if (baseMeal === '00:00') baseMeal = '';
+
+    if (holidays.has(dateStr)) {
+      status = 'Public Holiday'; isPubHol = true; dailyBase = 0; baseStart = baseEnd = baseMeal = '';
+    }
+
+    const cliLeave = leaveMap[clinician.name] || [];
+    for (const lr of cliLeave) {
+      if (!lr.startDate || !lr.endDate) continue;
+      const startKey = toDateKey(lr.startDate);
+      const endKey   = toDateKey(lr.endDate);
+      if (dateStr >= startKey && dateStr <= endKey) {
+        status = lr.type; dailyBase = 0; baseStart = baseEnd = baseMeal = '';
+        if (!isWknd) { const lk = leaveTracker.hasOwnProperty(lr.type) ? lr.type : 'Other'; leaveTracker[lk]++; }
+        break;
+      }
+    }
+
+    const todayRoster = rosterMap[dateStr] || [];
+    let dailyOnsite = 0, dailyOffsite = 0, otStartStr = '', otEndStr = '';
+
+    for (const re of todayRoster) {
+      let dur = parseTimeValue(re.otEnd) - parseTimeValue(re.otStart);
+      if (dur < 0) dur += 24;
+      if (re.onCall.includes(clinician.name)) {
+        dailyOnsite += dur; otStartStr = formatExcelTime(re.otStart); otEndStr = formatExcelTime(re.otEnd);
+      } else if (re.standby === clinician.name) {
+        dailyOffsite += dur / 3; otStartStr = formatExcelTime(re.otStart); otEndStr = formatExcelTime(re.otEnd);
+      }
+    }
+
+    const yesterday = new Date(year, month-1, day-1);
+    const yesterdayRoster = rosterMap[toDateKey(yesterday)] || [];
+    let postCallToday = false;
+
+    for (const re of yesterdayRoster) {
+      if (re.onCall.includes(clinician.name) && parseTimeValue(re.otEnd) < 12) { postCallToday = true; break; }
+    }
+
+    if (postCallToday && status === '' && !isWknd && !isPubHol) {
+      const postCallEndVal = isFri ? friPostCallTime : postCallTime;
+      baseEnd = formatExcelTime(postCallEndVal); baseMeal = ''; status = 'Post Call';
+      const startH = parseTimeValue(isFri ? friStart : normalStart);
+      const endH = parseTimeValue(postCallEndVal);
+      dailyBase = endH > startH ? endH - startH : 0;
+    }
+
+    grandBase += dailyBase; grandOnsite += dailyOnsite; grandOffsite += dailyOffsite;
+    const wi = Math.min(weekIndex, 5);
+    weeklyTotals[wi].base += dailyBase; weeklyTotals[wi].onsite += dailyOnsite; weeklyTotals[wi].offsite += dailyOffsite;
+
+    const otActive = dailyOnsite > 0 || dailyOffsite > 0;
+
+    if (isWknd || isPubHol) {
+      daysData.push({
+        day: dayLabel, isWeekend: isWknd, isHighlighted: false, status: status || (otActive ? 'On-Call' : ''),
+        start: otActive ? otStartStr : '', end: otActive ? otEndStr : '', meal: '',
+        base: toHHMMSS(dailyBase), onSite: toHHMMSS(dailyOnsite), offSite: toHHMMSS(dailyOffsite),
+      });
+    } else {
+      daysData.push({
+        day: dayLabel, isWeekend: false, isHighlighted: false, status, start: baseStart, end: baseEnd, meal: baseMeal,
+        base: toHHMMSS(dailyBase), onSite: '', offSite: '',
+      });
+      if (otActive) {
+        daysData.push({
+          day: '', isWeekend: false, isHighlighted: true, status: 'On-Call', start: otStartStr, end: otEndStr, meal: '',
+          base: '', onSite: toHHMMSS(dailyOnsite), offSite: toHHMMSS(dailyOffsite),
+        });
+      }
+    }
+  }
+
+  const weeklyFormatted = weeklyTotals
+    .map((w, i) => ({ label: `Week ${i+1}`, base: toHHMMSS(w.base), onsite: toHHMMSS(w.onsite), offsite: toHHMMSS(w.offsite), baseVal: w.base, onsiteVal: w.onsite, offsiteVal: w.offsite }))
+    .filter(w => w.baseVal > 0 || w.onsiteVal > 0 || w.offsiteVal > 0);
+
+  const leaveString = Object.entries(leaveTracker).filter(([,v]) => v > 0).map(([k,v]) => `${k}: ${v} day${v!==1?'s':''}`).join(', ');
+  const startDateStr = `01/${String(month).padStart(2,'0')}/${year}`;
+  const endDateStr = `${daysInMonth(year, month)}/${String(month).padStart(2,'0')}/${year}`;
+
+  return {
+    clinicianName: clinician.name,
+    rank: clinician.rank || '',
+    clinicianId: clinician.persal || '',
+    apptDate: clinician.apptDate || '',
+    apptNature: clinician.apptNature || '',
+    overtimeGroup: clinician.overtimegroup || '',
+    contractEnd: clinician.contractEnd || '',
+    hospitalName, startDateStr, endDateStr,
+    daysData, weeklyData: weeklyFormatted, leaveString,
+    grandBase: toHHMMSS(grandBase), grandOvertime: toHHMMSS(grandOnsite + grandOffsite), grandTotal: toHHMMSS(grandBase + grandOnsite + grandOffsite)
+  };
+}
+
+// ============================================================
+// PDF GENERATION (Using jsPDF and autotable)
+// ============================================================
+function buildPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'pt', 'a4'); // A4 dimensions: 595.28 x 841.89 points
+  const margin = 40;
+  let cursorY = margin;
+
+  // 1. HEADER
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(`${data.clinicianName} — Timesheet — ${data.hospitalName}`, margin, cursorY);
+  
+  cursorY += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`Rank: ${data.rank}   |   Persal #: ${data.clinicianId}   |   Period: ${data.startDateStr} to ${data.endDateStr}`, margin, cursorY);
+  
+  cursorY += 10;
+  doc.setLineWidth(1.5);
+  doc.line(margin, cursorY, 595.28 - margin, cursorY);
+  
+  cursorY += 15;
+
+  // 2. MAIN DAYS TABLE
+  doc.autoTable({
+    startY: cursorY,
+    head: [['Day', 'Status', 'Start Time', 'End Time', 'Meal Break', 'Base Hours', '1st On Call', 'Standby']],
+    body: data.daysData.map(d => [d.day, d.status, d.start, d.end, d.meal, d.base, d.onSite, d.offSite]),
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5 },
+    headStyles: { fillColor: [239, 239, 239], textColor: [34, 34, 34], fontStyle: 'bold', halign: 'center' },
+    bodyStyles: { halign: 'center' },
+    columnStyles: { 0: { halign: 'left', cellWidth: 75 } },
+    didParseCell: function(info) {
+      if (info.section === 'body') {
+        const rowData = data.daysData[info.row.index];
+        if (rowData.isHighlighted) { info.cell.styles.fillColor = [255, 248, 220]; }
+        else if (rowData.isWeekend) { info.cell.styles.fillColor = [242, 242, 242]; }
+      }
+    }
+  });
+
+  cursorY = doc.lastAutoTable.finalY + 20;
+
+  // Handle page break before summaries if close to bottom
+  if (cursorY > 700) {
+    doc.addPage();
+    cursorY = margin;
+  }
+
+  // 3. SUMMARIES (Weekly & Monthly Side-by-Side)
+  const halfWidth = (595.28 - (margin * 2) - 15) / 2;
+
+  // Weekly Totals
+  doc.autoTable({
+    startY: cursorY,
+    margin: { left: margin },
+    tableWidth: halfWidth,
+    head: [[{ content: 'Weekly Totals', colSpan: 4, styles: { halign: 'center', fillColor: [230, 230, 230] } }], ['Week', 'Base', '1st On Call', 'Standby']],
+    body: data.weeklyData.map(w => [w.label, w.base, w.onsite, w.offsite]),
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5, halign: 'center' },
+    headStyles: { textColor: [34, 34, 34], fontStyle: 'bold' }
+  });
+
+  const weeklyFinalY = doc.lastAutoTable.finalY;
+
+  // Monthly Totals
+  doc.autoTable({
+    startY: cursorY,
+    margin: { left: margin + halfWidth + 15 },
+    tableWidth: halfWidth,
+    head: [[{ content: 'Monthly Totals', colSpan: 2, styles: { halign: 'center', fillColor: [230, 230, 230] } }]],
+    body: [
+      ['Total Base Hours', data.grandBase],
+      ['Total Overtime', data.grandOvertime],
+      [{ content: 'Grand Total Hours', styles: { fontStyle: 'bold' } }, { content: data.grandTotal, styles: { fontStyle: 'bold' } }]
+    ],
+    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5 },
+    headStyles: { textColor: [34, 34, 34], fontStyle: 'bold' }
+  });
+
+  cursorY = Math.max(weeklyFinalY, doc.lastAutoTable.finalY) + 15;
+
+  // 4. LEAVE BOX
+  if (data.leaveString) {
+    if (cursorY > 750) { doc.addPage(); cursorY = margin; }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setFillColor(247, 247, 247);
+    doc.setDrawColor(208, 208, 208);
+    doc.rect(margin, cursorY, 595.28 - (margin * 2), 20, 'FD');
+    doc.text(`Leave Summary: ${data.leaveString}`, margin + 5, cursorY + 13);
+    cursorY += 35;
+  }
+
+  // 5. SIGNATURES
+  if (cursorY > 750) { doc.addPage(); cursorY = margin; }
+  cursorY += 40; // Spacing for lines
+
+  const colWidth = (595.28 - (margin * 2)) / 3;
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(0, 0, 0);
+  doc.setFontSize(8);
+
+  const sig1X = margin;
+  const sig2X = margin + colWidth;
+  const sig3X = margin + (colWidth * 2);
+  const lineLen = colWidth - 20;
+
+  // Lines
+  doc.line(sig1X, cursorY, sig1X + lineLen, cursorY);
+  doc.line(sig2X, cursorY, sig2X + lineLen, cursorY);
+  doc.line(sig3X, cursorY, sig3X + lineLen, cursorY);
+
+  cursorY += 12;
+  // Labels
+  doc.text('Employee', sig1X + (lineLen/2), cursorY, { align: 'center' });
+  doc.text('Certified Correct by Clinical Supervisor', sig2X + (lineLen/2), cursorY, { align: 'center' });
+  doc.text('Approved by CEO / Medical Superintendent', sig3X + (lineLen/2), cursorY, { align: 'center' });
+
+  return doc;
+}
+
+// ============================================================
+// MAIN GENERATION FLOW
+// ============================================================
+async function runGeneration() {
+  if (!workbook) {
+    log('No Excel file loaded. Please upload your roster file first.', 'err');
+    showLog();
+    return;
+  }
+  if (selectedMonths.size === 0) {
+    log('No months selected. Please select at least one month.', 'err');
+    showLog();
+    return;
+  }
+
+  const year = parseInt(document.getElementById('year-input').value);
+  const hospitalName = document.getElementById('hospital-input').value.trim() || 'Hospital';
+  
+  const config = {
+    start: document.getElementById('base-start').value,
+    end: document.getElementById('base-end').value,
+    meal: document.getElementById('base-meal').value,
+    postCallTime: document.getElementById('post-call-time').value,
+    friDiff: document.getElementById('friday-diff-check').checked,
+    friStart: document.getElementById('fri-start').value,
+    friEnd: document.getElementById('fri-end').value,
+    friMeal: document.getElementById('fri-meal').value,
+    friPostCallTime: document.getElementById('fri-post-call-time').value,
+  };
+
+  if (!year || year < 2000 || year > 2100) {
+    log('Invalid year entered.', 'err');
+    showLog();
+    return;
+  }
+
+  document.getElementById('gen-btn').disabled = true;
+  generatedTimesheets = [];
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('results-grid').innerHTML = '';
+  showLog();
+  log(`Starting batch for ${year}, months: ${[...selectedMonths].sort((a,b)=>a-b).map(m=>SHORT_MONTHS[m]).join(', ')}`, 'info');
+  setProgress(5);
+
+  let data;
+  try {
+    data = parseWorkbook(workbook);
+    log(`Parsed ${data.clinicians.length} clinicians, ${data.rosterEntries.length} roster entries, ${data.holidays.size} holidays`, 'ok');
+  } catch(e) {
+    log(`Failed to parse workbook: ${e.message}`, 'err');
+    document.getElementById('gen-btn').disabled = false;
+    return;
+  }
+
+  const months = [...selectedMonths].sort((a,b)=>a-b);
+  const total = data.clinicians.length * months.length;
+  let done = 0;
+
+  for (const month of months) {
+    for (const clinician of data.clinicians) {
+      try {
+        const tsData = generateTimesheetData(clinician, year, month, data, hospitalName, config);
+        generatedTimesheets.push({
+          label: `${clinician.name} — ${MONTH_NAMES[month]} ${year}`,
+          filename: `${clinician.name} - ${String(month).padStart(2,'0')}-${year} Timesheet.pdf`,
+          data: tsData
+        });
+        done++;
+        setProgress(Math.round(5 + (done/total)*90));
+        log(`✓ ${clinician.name} — ${MONTH_NAMES[month]} ready`, 'ok');
+      } catch(e) {
+        log(`✗ ${clinician.name} — ${MONTH_NAMES[month]} failed: ${e.message}`, 'err');
+        done++;
+      }
+      await new Promise(r => setTimeout(r, 0)); // Yield to keep UI responsive
+    }
+  }
+
+  setProgress(100);
+  log(`Batch complete — ${generatedTimesheets.length} ready to download`, 'info');
+  renderResults();
+  document.getElementById('gen-btn').disabled = false;
+}
+
+function renderResults() {
+  const grid = document.getElementById('results-grid');
+  grid.innerHTML = '';
+
+  generatedTimesheets.forEach((ts, i) => {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `
+      <div class="name">${ts.label}</div>
+      <button class="dl-btn" onclick="downloadPDF(${i})">↓ Download PDF</button>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('results-section').style.display = 'block';
+}
+
+function downloadPDF(index) {
+  const ts = generatedTimesheets[index];
+  try {
+    const doc = buildPDF(ts.data);
+    doc.save(ts.filename);
+  } catch(e) {
+    log(`Error saving PDF: ${e.message}`, 'err');
+  }
+}
+
+async function downloadAllPDFs() {
+  const btn = document.getElementById('dl-all-pdf-btn');
+  btn.disabled = true;
+  btn.textContent = 'Downloading... (Check your browser downloads)';
+  log('Starting mass download...', 'info');
+
+  for (let i = 0; i < generatedTimesheets.length; i++) {
+    downloadPDF(i);
+    // Slight delay to prevent browser throttling multi-downloads
+    await new Promise(r => setTimeout(r, 200)); 
+  }
+
+  log('All PDFs triggered for download.', 'ok');
+  btn.disabled = false;
+  btn.textContent = 'Download All (Zip/Multiple)';
+}
+
+// ============================================================
+// REPORTING TOOL EXCEL EXPORT
+// ============================================================
+
+/**
+ * Parse an HH:MM:SS string (or HH:MM) into decimal hours.
+ * Returns 0 if the string is empty or unparseable.
+ */
+function hhmmToDecimal(str) {
+  if (!str || str === '') return 0;
+  const parts = str.split(':');
+  if (parts.length < 2) return 0;
+  return parseInt(parts[0] || 0) + parseInt(parts[1] || 0) / 60 + parseInt(parts[2] || 0) / 3600;
+}
+
+/**
+ * Convert decimal hours to an Excel time fraction (fraction of 24h).
+ * We store as a number and format the cell as [h]:mm:ss so it renders as
+ * e.g. "40:00:00" rather than wrapping at 24 h.
+ */
+function decimalToExcelTime(hours) {
+  return hours / 24;
+}
+
+/**
+ * For a given clinician's timesheet data, compute weekly normal and OT hours
+ * for up to 6 weeks. Returns array of { normalHrs, otHrs } objects.
+ *
+ * The weeklyData inside tsData already has per-week totals as HH:MM:SS strings
+ * in properties: base (normal), onsite (OT on-site), offsite (OT standby).
+ * The reporting tool sums onsite + offsite as "overtime hours worked".
+ */
+function extractWeeklyHours(tsData) {
+  const weeks = [];
+  // weeklyData is filtered to non-zero weeks, label = "Week N"
+  // We need up to 6 slots indexed 1..6
+  const byWeek = {};
+  (tsData.weeklyData || []).forEach(w => {
+    const idx = parseInt(w.label.replace('Week ', ''));
+    byWeek[idx] = w;
+  });
+  for (let i = 1; i <= 6; i++) {
+    const w = byWeek[i];
+    if (w) {
+      const ot = hhmmToDecimal(w.onsite) + hhmmToDecimal(w.offsite);
+      weeks.push({ normalHrs: hhmmToDecimal(w.base), otHrs: ot });
+    } else {
+      weeks.push({ normalHrs: 0, otHrs: 0 });
+    }
+  }
+  return weeks;
+}
+
+/**
+ * Build and trigger download of one reporting-tool .xlsx for a given month.
+ * monthTimesheets: array of { label, filename, data } objects all for the same month.
+ */
+function buildReportingExcel(monthTimesheets, monthName, year) {
+  const wb = XLSX.utils.book_new();
+  const wsName = monthName.substring(0, 31); // sheet names max 31 chars
+
+  // ---- Build the rows array ----
+  // Row 1: merged title row
+  // Row 2: blank / subtitle
+  // Row 3: week header labels (Week 1 .. Week 6 spans, plus totals etc.)
+  // Row 4: sub-headers
+  // Row 5+: data rows
+
+  const COL_COUNT = 27; // A–AA
+
+  // We'll use an array-of-arrays approach then apply styles via cell addresses.
+  const aoaRows = [];
+
+  // Row 0 (index 0): Main title
+  const titleRow = new Array(COL_COUNT).fill('');
+  titleRow[0] = 'No.';
+  titleRow[1] = 'Surname & Initials';
+  titleRow[2] = 'Persal no.';
+  titleRow[3] = 'Job title';
+  titleRow[4] = 'Pay point';
+  titleRow[5] = 'Placement (home body)';
+  titleRow[6] = 'Nature of appointment';
+  titleRow[7] = 'Appointment date';
+  titleRow[8] = 'Contract end date';
+  titleRow[9] = 'Reporting month';
+  titleRow[10] = 'COT Group (2/3)';
+  // Weeks 1-6: each takes 2 cols (Normal | OT)
+  titleRow[11] = 'Week 1 Normal hrs 40hrs';
+  titleRow[12] = 'Week 1 Overtime hours worked';
+  titleRow[13] = 'Week 2 Normal hrs 40hrs';
+  titleRow[14] = 'Week 2 Overtime hours worked';
+  titleRow[15] = 'Week 3 Normal hrs 40hrs';
+  titleRow[16] = 'Week 3 Overtime hours worked';
+  titleRow[17] = 'Week 4 Normal hrs 40hrs';
+  titleRow[18] = 'Week 4 Overtime hours worked';
+  titleRow[19] = 'Week 5 Normal hrs 40hrs';
+  titleRow[20] = 'Week 5 Overtime hours worked';
+  titleRow[21] = 'Week 6 Normal hrs 40hrs';
+  titleRow[22] = 'Week 6 Overtime hours worked';
+  titleRow[23] = 'Total hours worked (normal hours)';
+  titleRow[24] = 'Total hours worked (overtime hours)';
+  titleRow[25] = 'Type of leave';
+  titleRow[26] = 'No of days taken';
+  aoaRows.push(titleRow);
+
+  // Data rows
+  monthTimesheets.forEach((ts, idx) => {
+    const d = ts.data;
+    const weeks = extractWeeklyHours(d);
+    const totalNormal = weeks.reduce((s, w) => s + w.normalHrs, 0);
+    const totalOT = weeks.reduce((s, w) => s + w.otHrs, 0);
+
+    const row = new Array(COL_COUNT).fill('');
+    row[0] = idx + 1;
+    row[1] = d.clinicianName;
+    row[2] = d.clinicianId;
+    row[3] = d.rank;
+    row[4] = d.hospitalName;
+    row[5] = d.hospitalName;
+    row[6] = d.apptNature; // Nature of appointment — not stored in current data model
+    row[7] = d.apptDate; // Appointment date — not in timesheet data
+    row[8] = d.contractEnd; // Contract end — not in timesheet data
+    row[9] = `${monthName} ${year}`;
+    row[10] = 3.2;
+
+    for (let w = 0; w < 6; w++) {
+      row[11 + w * 2]     = weeks[w].normalHrs > 0 ? decimalToExcelTime(weeks[w].normalHrs) : '';
+      row[11 + w * 2 + 1] = weeks[w].otHrs > 0     ? decimalToExcelTime(weeks[w].otHrs)     : '';
+    }
+
+    row[23] = totalNormal > 0 ? decimalToExcelTime(totalNormal) : '';
+    row[24] = totalOT > 0     ? decimalToExcelTime(totalOT)     : '';
+    row[25] = d.leaveString || '';
+    row[26] = ''; // No of days — aggregate not broken out separately
+
+    aoaRows.push(row);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoaRows);
+
+  // ---- Cell widths ----
+  ws['!cols'] = [
+    { wch: 5 },  // A No.
+    { wch: 26 }, // B Name
+    { wch: 12 }, // C Persal
+    { wch: 32 }, // D Job title
+    { wch: 14 }, // E Pay point
+    { wch: 14 }, // F Placement
+    { wch: 16 }, // G Nature
+    { wch: 14 }, // H Appt date
+    { wch: 14 }, // I Contract end
+    { wch: 16 }, // J Reporting month
+    { wch: 10 }, // K COT Group
+    // Weeks x6 x2
+    ...Array(12).fill({ wch: 14 }),
+    { wch: 16 }, // W Total normal
+    { wch: 16 }, // X Total OT
+    { wch: 28 }, // Y Leave type
+    { wch: 12 }, // Z No of days
+  ];
+
+  // ---- Apply time format to hour cells ----
+  // Header row is row index 0 (Excel row 1). Data starts at row index 1 (Excel row 2).
+  const timeColIndices = [11,12,13,14,15,16,17,18,19,20,21,22,23,24];
+  const timeFmt = '[h]:mm:ss';
+
+  for (let r = 1; r < aoaRows.length; r++) {
+    for (const ci of timeColIndices) {
+      const cellRef = XLSX.utils.encode_cell({ r, c: ci });
+      if (ws[cellRef] && ws[cellRef].v !== '') {
+        ws[cellRef].t = 'n';
+        ws[cellRef].z = timeFmt;
+      }
+    }
+  }
+
+  // ---- Header row styling ----
+  // SheetJS community edition doesn't support styles, but we can set row height
+  // and freeze the top row for usability.
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 }; // Freeze header row
+  ws['!rows'] = [{ hpt: 30 }]; // Header row height
+
+  // Append sheet
+  XLSX.utils.book_append_sheet(wb, ws, wsName);
+
+  // ---- Trigger download ----
+  const filename = `COT_Reporting_Tool_${monthName}_${year}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  return filename;
+}
+
+/**
+ * Main entry point for Step 5.
+ */
+function runReportingExport() {
+  if (generatedTimesheets.length === 0) {
+    log('No timesheet data found. Please run Step 4 first.', 'err');
+    showLog();
+    return;
+  }
+
+  const year = parseInt(document.getElementById('year-input').value);
+
+  // Group timesheets by month
+  const byMonth = {};
+  generatedTimesheets.forEach(ts => {
+    // Label format: "Name — Month Year"
+    const parts = ts.label.split(' — ');
+    const monthYear = parts[parts.length - 1]; // e.g. "January 2026"
+    const [mn] = monthYear.split(' ');
+    if (!byMonth[mn]) byMonth[mn] = [];
+    byMonth[mn].push(ts);
+  });
+
+  const reportBtn = document.getElementById('report-btn');
+  reportBtn.disabled = true;
+
+  const grid = document.getElementById('report-results-grid');
+  grid.innerHTML = '';
+  document.getElementById('report-results-section').style.display = 'block';
+
+  const generatedFiles = [];
+
+  Object.entries(byMonth).forEach(([monthName, tsList]) => {
+    try {
+      // Sort by clinician name for consistent ordering
+      tsList.sort((a, b) => a.data.clinicianName.localeCompare(b.data.clinicianName));
+      const filename = buildReportingExcel(tsList, monthName, year);
+      generatedFiles.push(filename);
+      log(`✓ Reporting tool exported: ${filename}`, 'ok');
+
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <div class="name">📊 ${filename}</div>
+        <button class="dl-btn" onclick="buildReportingExcel(${JSON.stringify(tsList.map(t=>({label:t.label,filename:t.filename,data:t.data})))}, '${monthName}', ${year})">↓ Re-download</button>
+      `;
+      grid.appendChild(card);
+    } catch(e) {
+      log(`✗ Failed to export ${monthName}: ${e.message}`, 'err');
+    }
+  });
+
+  showLog();
+  log(`Reporting export complete — ${generatedFiles.length} file(s) generated.`, 'info');
+  reportBtn.disabled = false;
+}
+</script>
+
+</body>
+</html>
