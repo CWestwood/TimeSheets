@@ -1524,15 +1524,16 @@ function downloadTemplate() {
   XLSX.utils.book_append_sheet(wb, rosterWs, 'Call Roster');
 
   // ---- Sheet 4: Public Holidays ----
-  const holidayHeaders = ['Date', 'Classification'];
+  const holidayHeaders = ['Date', 'Classification', '', '', 'Day', 'Type'];
   const holidayExamples = [
-    ['2026-01-01', 'Public Holiday'],
-    ['2026-03-21', 'Public Holiday'],
-    ['2026-04-17', 'Public Holiday'],
+    ['2026-01-01', 'Public Holiday', '', '', 'Thu', 'Weekday'],
+    ['2026-03-21', 'Public Holiday', '', '', 'Sat', 'Weekend'],
+    ['2026-04-17', 'Public Holiday', '', '', 'Fri', 'Weekday'],
   ];
   const holidayNote = [
     '← Excel date serial or YYYY-MM-DD',
-    ''
+    '← Must say "Public Holiday"',
+    '', '', '', ''
   ];
   const holidayWs = XLSX.utils.aoa_to_sheet([holidayHeaders, ...holidayExamples, holidayNote]);
   holidayWs['!cols'] = [{wch:16},{wch:18},{wch:4},{wch:4},{wch:10},{wch:10}];
