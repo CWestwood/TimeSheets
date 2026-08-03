@@ -3,10 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Timesheet Generator</title>
+<title>Monthly Timesheet Generator</title>
+
+<!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
+<!-- Third-party Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -43,7 +46,6 @@
     line-height: 1.6;
   }
 
-  /* ---- LAYOUT ---- */
   .shell {
     max-width: 780px;
     margin: 0 auto;
@@ -71,7 +73,6 @@
     font-weight: 300;
   }
 
-  /* ---- SECTIONS ---- */
   .section {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -112,6 +113,34 @@
     margin-bottom: 20px;
     line-height: 1.5;
   }
+
+  /* ---- TABS FOR FILE VS GOOGLE SHEETS ---- */
+  .tab-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .tab-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--ink-muted);
+    transition: all 0.15s;
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
   /* ---- UPLOAD ZONE ---- */
   .upload-zone {
@@ -187,7 +216,7 @@
     letter-spacing: 0.03em;
   }
 
-  input[type=text], input[type=number], input[type=time] {
+  input[type=text], input[type=number], input[type=time], input[type=url] {
     width: 100%;
     padding: 10px 14px;
     border: 1px solid var(--border-strong);
@@ -200,10 +229,22 @@
     transition: border-color 0.15s, box-shadow 0.15s;
   }
 
-  input[type=text]:focus, input[type=number]:focus {
+  input:focus {
     border-color: var(--accent-mid);
     box-shadow: 0 0 0 3px rgba(74,124,94,0.15);
   }
+
+  .btn-secondary {
+    padding: 10px 18px;
+    border: 1px solid var(--accent);
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: var(--radius);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-secondary:hover { background: var(--accent); color: #fff; }
 
   /* ---- MONTH PICKER ---- */
   .month-grid {
@@ -228,12 +269,7 @@
   }
 
   .month-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-mid); }
-
-  .month-btn.selected {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-  }
+  .month-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   /* ---- GENERATE BUTTON ---- */
   .generate-btn {
@@ -281,11 +317,7 @@
   .log-line.dim { color: #5a5850; }
 
   /* ---- RESULTS ---- */
-  .results-grid {
-    display: grid;
-    gap: 10px;
-    margin-top: 16px;
-  }
+  .results-grid { display: grid; gap: 10px; margin-top: 16px; }
 
   .result-card {
     display: flex;
@@ -299,12 +331,7 @@
   }
 
   .result-card:hover { border-color: var(--border-strong); }
-
-  .result-card .name {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 500;
-  }
+  .result-card .name { flex: 1; font-size: 14px; font-weight: 500; }
 
   .dl-btn {
     padding: 7px 16px;
@@ -337,9 +364,9 @@
 
   .dl-all-btn:hover { background: var(--accent); color: #fff; }
 
-  /* ---- PROGRESS ---- */
+  /* ---- PROGRESS BAR ---- */
   .progress-bar {
-    height: 3px;
+    height: 4px;
     background: var(--border);
     border-radius: 999px;
     overflow: hidden;
@@ -383,22 +410,10 @@
     gap: 6px;
   }
 
-  .sheet-card .sheet-name::before {
-    content: '⬛';
-    font-size: 8px;
-    color: var(--accent);
-  }
-
-  .sheet-card ul {
-    list-style: none;
-    font-size: 12px;
-    color: var(--ink-muted);
-    line-height: 1.9;
-  }
-
+  .sheet-card .sheet-name::before { content: '⬛'; font-size: 8px; color: var(--accent); }
+  .sheet-card ul { list-style: none; font-size: 12px; color: var(--ink-muted); line-height: 1.9; }
   .sheet-card ul li::before { content: '· '; color: var(--ink-faint); }
 
-  /* ---- RESPONSIVE ---- */
   @media (max-width: 560px) {
     .field-row, .field-row.quad { grid-template-columns: 1fr; }
     .month-grid { grid-template-columns: repeat(4, 1fr); }
@@ -413,28 +428,46 @@
 
   <header>
     <h1>Monthly Timesheet Generator</h1>
-    <p class="sub">Upload your roster Excel file, select the period, and download print-ready PDFs and monthly reporting spreadsheets.</p>
+    <p class="sub">Upload your roster data via Excel or Google Sheets, generate print-ready PDFs, and export monthly reporting tools.</p>
   </header>
 
+  <!-- STEP 1: UPLOAD / GOOGLE SHEETS SOURCE -->
   <div class="section" id="step-upload">
-    <div class="section-label">Step 1 — Excel file</div>
+    <div class="section-label">Step 1 — Data Source</div>
     <h2>Upload Roster Data</h2>
-    <p class="hint">Upload your <strong>'Overtime spreadsheet'.xlsx</strong> file. It must contain four sheets: Persal Details, Leave Schedule, Call Roster, and Public Holidays.</p>
+    <p class="hint">Upload your roster Excel file or link a public Google Sheet. It must contain four sheets: <strong>Persal Details, Leave Schedule, Call Roster, Public Holidays</strong>.</p>
 
-    <div style="margin-bottom: 20px;">
-      <button class="dl-all-btn" onclick="downloadTemplate()" style="width: auto; padding: 9px 18px; font-size: 13px; font-weight: 500; font-family: var(--font-body);">
-        ↓ Download blank template (.xlsx)
-      </button>
-    </div>
-    
-    <div class="upload-zone" id="drop-zone">
-      <input type="file" id="file-input" accept=".xlsx,.xls">
-      <span class="upload-icon">📂</span>
-      <div class="upload-text"><strong>Click to browse</strong> or drag and drop here</div>
-      <div class="upload-text" style="font-size:12px; margin-top:4px;">Accepts .xlsx files only</div>
-      <div id="file-name-badge"></div>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchTab('excel-tab', this)">Excel File Upload</button>
+      <button class="tab-btn" onclick="switchTab('gsheets-tab', this)">Google Sheets Link</button>
     </div>
 
+    <!-- Excel Tab -->
+    <div id="excel-tab" class="tab-content active">
+      <div style="margin-bottom: 20px;">
+        <button class="btn-secondary" onclick="downloadTemplate()">↓ Download Blank Excel Template (.xlsx)</button>
+      </div>
+      
+      <div class="upload-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".xlsx,.xls">
+        <span class="upload-icon">📂</span>
+        <div class="upload-text"><strong>Click to browse</strong> or drag and drop here</div>
+        <div class="upload-text" style="font-size:12px; margin-top:4px;">Accepts .xlsx files only</div>
+        <div id="file-name-badge"></div>
+      </div>
+    </div>
+
+    <!-- Google Sheets Tab -->
+    <div id="gsheets-tab" class="tab-content">
+      <label for="gsheet-url">Google Sheets Shareable / Published URL</label>
+      <div style="display:flex; gap:10px;">
+        <input type="url" id="gsheet-url" placeholder="https://docs.google.com/spreadsheets/d/...">
+        <button class="btn-secondary" style="white-space:nowrap;" onclick="loadGoogleSheet()">Fetch Sheet</button>
+      </div>
+      <p style="font-size:12px; color:var(--ink-muted); margin-top:8px;">Ensure the Google Sheet permission is set to "Anyone with the link can view".</p>
+    </div>
+
+    <!-- Data Spec Guide -->
     <div class="sheet-guide">
       <div class="sheet-card">
         <div class="sheet-name">Persal Details</div>
@@ -443,17 +476,16 @@
           <li>Col B — Persal number</li>
           <li>Col C — Job title / rank</li>
           <li>Col D — Appointment date</li>
-          <li>Col E - Nature of Appointment</li>
+          <li>Col E — Nature of Appointment</li>
           <li>Col F — Overtime Group</li>
-          <li>Col G - Contract End <i> (for contract/CSMOs, otherwise N/A)</i></li>
-          
+          <li>Col G — Contract End Date</li>
         </ul>
       </div>
       <div class="sheet-card">
         <div class="sheet-name">Leave Schedule</div>
         <ul>
           <li>Col A — Name</li>
-          <li>Col B — Leave type <i> (Annual, Sick, Family Responsibility, Other) </i></li>
+          <li>Col B — Leave type</li>
           <li>Col C — Start date</li>
           <li>Col D — End date</li>
         </ul>
@@ -477,6 +509,7 @@
     </div>
   </div>
 
+  <!-- STEP 2: HOSPITAL & PERIOD -->
   <div class="section" id="step-period">
     <div class="section-label">Step 2 — Hospital & Period</div>
     <h2>Select Hospital & Reporting Period</h2>
@@ -508,6 +541,7 @@
     </div>
   </div>
 
+  <!-- STEP 3: WORKING HOURS CONFIGURATION -->
   <div class="section" id="step-hours">
     <div class="section-label">Step 3 — Base Working Hours</div>
     <h2>Set Standard Hours</h2>
@@ -532,7 +566,7 @@
 
     <div style="margin-top: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
       <input type="checkbox" id="friday-diff-check" onchange="toggleFridayHours()" checked>
-      <label for="friday-diff-check" style="margin: 0; font-size: 14px; color: var(--ink); font-weight: normal;">Friday is different</label>
+      <label for="friday-diff-check" style="margin: 0; font-size: 14px; color: var(--ink); font-weight: normal;">Friday hours are different</label>
     </div>
 
     <div class="field-row quad" id="friday-hours-row">
@@ -555,6 +589,7 @@
     </div>
   </div>
 
+  <!-- STEP 4: GENERATION -->
   <div class="section">
     <div class="section-label">Step 4 — Generate</div>
     <h2>Create Timesheets</h2>
@@ -572,14 +607,15 @@
     <div id="results-section" style="display:none; margin-top:24px;">
       <div class="section-label">Generated PDF Timesheets</div>
       <div class="results-grid" id="results-grid"></div>
-      <button class="dl-all-btn" id="dl-all-pdf-btn" onclick="downloadAllPDFs()" style="margin-top:16px;">Download All (Zip/Multiple)</button>
+      <button class="dl-all-btn" id="dl-all-pdf-btn" onclick="downloadAllPDFs()">Download All PDFs</button>
     </div>
   </div>
 
+  <!-- STEP 5: MONTHLY REPORTING TOOL EXPORT -->
   <div class="section" id="step-reporting">
     <div class="section-label">Step 5 — Reporting Tool</div>
     <h2>Export Monthly Reporting Spreadsheets</h2>
-    <p class="hint">Generates one <strong>.xlsx file per selected month</strong> matching the COT Monitoring Tool format — with each doctor's weekly normal hours and overtime, monthly totals, leave, and Persal details. Generate timesheets first (Step 4), then click below.</p>
+    <p class="hint">Generates standard COT Monitoring Tool spreadsheets formatted with each doctor's weekly normal and overtime hours. Execute Step 4 first.</p>
 
     <button class="generate-btn" id="report-btn" onclick="runReportingExport()" style="background: var(--accent-mid);">
       Export Reporting Tool Excel(s) →
@@ -595,56 +631,28 @@
 
 <script>
 // ============================================================
-// GLOBALS
+// CONSTANTS & GLOBALS
 // ============================================================
 let workbook = null;
-let selectedMonths = new Set();
-let generatedTimesheets = []; // Stores pure JSON data for jsPDF generation
+const selectedMonths = new Set();
+let generatedTimesheets = [];
 
 const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
 const SHORT_MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // ============================================================
-// FILE UPLOAD
+// UI & TAB NAVIGATION
 // ============================================================
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f) loadFile(f);
-});
-
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) loadFile(e.target.files[0]);
-});
-
-function loadFile(file) {
-  const reader = new FileReader();
-  reader.onload = evt => {
-    try {
-      workbook = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
-      document.getElementById('file-name-badge').innerHTML = `<div class="file-badge">✓ ${file.name}</div>`;
-      log(`Loaded: ${file.name} (${workbook.SheetNames.join(', ')})`, 'ok');
-      showLog();
-    } catch(e) {
-      log(`Error reading file: ${e.message}`, 'err');
-      showLog();
-    }
-  };
-  reader.readAsArrayBuffer(file);
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
 }
 
-// ============================================================
-// MONTH SELECTOR & UI
-// ============================================================
 document.querySelectorAll('.month-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    const m = parseInt(btn.dataset.month);
+    const m = parseInt(btn.dataset.month, 10);
     if (selectedMonths.has(m)) {
       selectedMonths.delete(m);
       btn.classList.remove('selected');
@@ -670,17 +678,89 @@ function log(msg, type='dim') {
 }
 
 function showLog() { document.getElementById('log-box').classList.add('visible'); }
-
 function setProgress(pct) {
   document.getElementById('progress-bar').classList.add('visible');
   document.getElementById('progress-fill').style.width = pct + '%';
 }
 
 // ============================================================
-// HELPERS
+// FILE UPLOAD & GOOGLE SHEETS HANDLERS
+// ============================================================
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      workbook = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
+      document.getElementById('file-name-badge').innerHTML = `<div class="file-badge">✓ ${file.name}</div>`;
+      log(`Loaded: ${file.name} (${workbook.SheetNames.join(', ')})`, 'ok');
+      showLog();
+    } catch(e) {
+      log(`Error reading file: ${e.message}`, 'err');
+      showLog();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function loadGoogleSheet() {
+  const urlInput = document.getElementById('gsheet-url').value.trim();
+  if (!urlInput) {
+    log('Please enter a valid Google Sheets URL.', 'err');
+    showLog();
+    return;
+  }
+
+  // Extract Sheet ID
+  const match = urlInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (!match) {
+    log('Invalid Google Sheets URL format.', 'err');
+    showLog();
+    return;
+  }
+  const sheetId = match[1];
+  log(`Fetching Google Sheet ID: ${sheetId}...`, 'info');
+  showLog();
+
+  const requiredSheets = ['Persal Details', 'Leave Schedule', 'Call Roster', 'Public Holidays'];
+  const newWb = XLSX.utils.book_new();
+
+  try {
+    for (const sheetName of requiredSheets) {
+      const fetchUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+      const resp = await fetch(fetchUrl);
+      if (!resp.ok) throw new Error(`Failed to load sheet "${sheetName}". Verify sharing settings.`);
+      const csvText = await resp.text();
+      const tempWb = XLSX.read(csvText, { type: 'string', cellDates: true });
+      const firstSheet = tempWb.Sheets[tempWb.SheetNames[0]];
+      XLSX.utils.book_append_sheet(newWb, firstSheet, sheetName);
+    }
+    workbook = newWb;
+    log(`Successfully imported Google Sheet with all required tabs!`, 'ok');
+  } catch (err) {
+    log(`Error importing Google Sheet: ${err.message}`, 'err');
+  }
+}
+
+// ============================================================
+// DATE & TIME HELPERS
 // ============================================================
 function toHHMMSS(decimalHours) {
-  if (!decimalHours || isNaN(decimalHours) || decimalHours === 0) return '';
+  if (!decimalHours || isNaN(decimalHours) || decimalHours <= 0) return '';
   let h = Math.floor(decimalHours);
   let m = Math.round((decimalHours - h) * 60);
   if (m === 60) { h++; m = 0; }
@@ -692,13 +772,11 @@ function parseTimeValue(val) {
   if (val instanceof Date) return val.getHours() + val.getMinutes()/60 + val.getSeconds()/3600;
   if (typeof val === 'number') {
     const totalSeconds = Math.round(val * 86400);
-    const h = Math.floor(totalSeconds / 3600);
-    const min = Math.floor((totalSeconds % 3600) / 60);
-    return h + min/60;
+    return Math.floor(totalSeconds / 3600) + (Math.floor((totalSeconds % 3600) / 60) / 60);
   }
   if (typeof val === 'string') {
     const parts = val.split(':');
-    if (parts.length >= 2) return parseInt(parts[0]) + parseInt(parts[1])/60;
+    if (parts.length >= 2) return parseInt(parts[0], 10) + parseInt(parts[1], 10)/60;
   }
   return 0.0;
 }
@@ -715,9 +793,35 @@ function formatExcelTime(val) {
   return String(val);
 }
 
+function formatDateDisplay(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return `${String(val.getDate()).padStart(2,'0')}/${String(val.getMonth()+1).padStart(2,'0')}/${val.getFullYear()}`;
+  }
+  return String(val);
+}
+
 function toDateKey(d) {
   if (!d) return null;
   if (d instanceof Date) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return null;
+}
+
+function parseDateCell(cell) {
+  if (!cell) return null;
+  if (cell instanceof Date) return cell;
+  if (typeof cell === 'number') {
+    const d = XLSX.SSF.parse_date_code(cell);
+    if (d) return new Date(d.y, d.m-1, d.d);
+  }
+  if (typeof cell === 'string') {
+    const cleanStr = cell.trim().substring(0, 10);
+    const parts = cleanStr.includes('-') ? cleanStr.split('-') : cleanStr.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10)-1, parseInt(parts[2], 10));
+      return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10)-1, parseInt(parts[0], 10));
+    }
+  }
   return null;
 }
 
@@ -726,35 +830,33 @@ function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); }
 function weekday(year, month, day) { const d = new Date(year, month-1, day).getDay(); return d === 0 ? 6 : d - 1; }
 
 // ============================================================
-// EXCEL DATA PARSING
+// PARSE WORKBOOK DATA
 // ============================================================
 function parseWorkbook(wb) {
-  const persalRows  = sheetToObjectsRaw(wb.Sheets['Persal Details']);
-  const leaveRows   = sheetToObjectsRaw(wb.Sheets['Leave Schedule']);
-  const rosterRows  = sheetToObjectsRaw(wb.Sheets['Call Roster']);
-  const holidayRows = sheetToObjectsRaw(wb.Sheets['Public Holidays']);
+  const persalRows  = wb.Sheets['Persal Details'] ? sheetToObjectsRaw(wb.Sheets['Persal Details']) : [];
+  const leaveRows   = wb.Sheets['Leave Schedule'] ? sheetToObjectsRaw(wb.Sheets['Leave Schedule']) : [];
+  const rosterRows  = wb.Sheets['Call Roster'] ? sheetToObjectsRaw(wb.Sheets['Call Roster']) : [];
+  const holidayRows = wb.Sheets['Public Holidays'] ? sheetToObjectsRaw(wb.Sheets['Public Holidays']) : [];
 
   const clinicians = [];
   for (let i = 1; i < persalRows.length; i++) {
     const r = persalRows[i];
-    const name = r[0];
-    if (!name || String(name).trim() === '') continue;
-    clinicians.push({ name: String(name).trim(), persal: r[1], rank: r[2], apptDate: r[3], apptNature: r[4], overtimegroup: r[5], contractEnd: r[6]});
+    if (!r[0] || String(r[0]).trim() === '') continue;
+    clinicians.push({
+      name: String(r[0]).trim(),
+      persal: r[1] ? String(r[1]).trim() : '',
+      rank: r[2] ? String(r[2]).trim() : '',
+      apptDate: parseDateCell(r[3]),
+      apptNature: r[4] ? String(r[4]).trim() : '',
+      overtimeGroup: r[5] ? String(r[5]).trim() : '',
+      contractEnd: parseDateCell(r[6])
+    });
   }
 
   const holidays = new Set();
   for (let i = 1; i < holidayRows.length; i++) {
-    const cell = holidayRows[i][0];
-    if (!cell) continue;
-    let dateStr = null;
-    if (cell instanceof Date) { dateStr = toDateKey(cell); }
-    else if (typeof cell === 'number') {
-      const d = XLSX.SSF.parse_date_code(cell);
-      if (d) dateStr = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
-    } else if (typeof cell === 'string') {
-      dateStr = cell.substring(0,10);
-    }
-    if (dateStr) holidays.add(dateStr);
+    const dateObj = parseDateCell(holidayRows[i][0]);
+    if (dateObj) holidays.add(toDateKey(dateObj));
   }
 
   const leaveRecords = [];
@@ -784,22 +886,8 @@ function parseWorkbook(wb) {
   return { clinicians, holidays, leaveRecords, rosterEntries };
 }
 
-function parseDateCell(cell) {
-  if (!cell) return null;
-  if (cell instanceof Date) return cell;
-  if (typeof cell === 'number') {
-    const d = XLSX.SSF.parse_date_code(cell);
-    if (d) return new Date(d.y, d.m-1, d.d);
-  }
-  if (typeof cell === 'string') {
-    const parts = cell.substring(0,10).split('-');
-    if (parts.length === 3) return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-  }
-  return null;
-}
-
 // ============================================================
-// DATA GENERATION (Returns JSON Object, NO HTML)
+// GENERATE TIMESHEET DATA (FIXED VARIABLE SCOPING)
 // ============================================================
 function generateTimesheetData(clinician, year, month, data, hospitalName, config) {
   const { holidays, leaveRecords, rosterEntries } = data;
@@ -822,15 +910,13 @@ function generateTimesheetData(clinician, year, month, data, hospitalName, confi
   const daysData = [];
   let grandBase = 0, grandOnsite = 0, grandOffsite = 0;
   const weeklyTotals = Array.from({length:6}, () => ({base:0, onsite:0, offsite:0}));
-  const leaveTracker = { 'Annual Leave': 0, 'Sick Leave': 0, 'Family Responsibility Leave': 0, 'Other': 0 };
+  const leaveTracker = { 'Annual': 0, 'Sick': 0, 'Family Responsibility': 0, 'Other': 0 };
 
   const leaveMap = {};
   leaveRecords.forEach(lr => {
     if (!leaveMap[lr.name]) leaveMap[lr.name] = [];
     leaveMap[lr.name].push(lr);
   });
-
-  const totalLeaveDays = Object.values(leaveTracker).reduce((sum, v) => sum + v, 0);
 
   const rosterMap = {};
   rosterEntries.forEach(re => {
@@ -869,7 +955,10 @@ function generateTimesheetData(clinician, year, month, data, hospitalName, confi
       const endKey   = toDateKey(lr.endDate);
       if (dateStr >= startKey && dateStr <= endKey) {
         status = lr.type; dailyBase = 0; baseStart = baseEnd = baseMeal = '';
-        if (!isWknd) { const lk = leaveTracker.hasOwnProperty(lr.type) ? lr.type : 'Other'; leaveTracker[lk]++; }
+        if (!isWknd) {
+          const lk = leaveTracker.hasOwnProperty(lr.type) ? lr.type : 'Other';
+          leaveTracker[lk]++;
+        }
         break;
       }
     }
@@ -934,19 +1023,18 @@ function generateTimesheetData(clinician, year, month, data, hospitalName, confi
     .filter(w => w.baseVal > 0 || w.onsiteVal > 0 || w.offsiteVal > 0);
 
   const leaveString = Object.entries(leaveTracker).filter(([,v]) => v > 0).map(([k,v]) => `${k}: ${v} day${v!==1?'s':''}`).join(', ');
- 
-  const startDateStr = `01/${String(month).padStart(2,'0')}/${year}`;
-  const endDateStr = `${daysInMonth(year, month)}/${String(month).padStart(2,'0')}/${year}`;
 
   return {
     clinicianName: clinician.name,
     rank: clinician.rank || '',
     clinicianId: clinician.persal || '',
-    apptDate: clinician.apptDate || '',
+    apptDate: formatDateDisplay(clinician.apptDate),
     apptNature: clinician.apptNature || '',
-    overtimeGroup: clinician.overtimegroup || '',
-    contractEnd: clinician.contractEnd || '',
-    hospitalName, startDateStr, endDateStr,
+    overtimeGroup: clinician.overtimeGroup || '3.2',
+    contractEnd: formatDateDisplay(clinician.contractEnd),
+    hospitalName, 
+    startDateStr: `01/${String(month).padStart(2,'0')}/${year}`,
+    endDateStr: `${daysInMonth(year, month)}/${String(month).padStart(2,'0')}/${year}`,
     daysData, weeklyData: weeklyFormatted, leaveString,
     totalLeaveDays: Object.values(leaveTracker).reduce((sum, v) => sum + v, 0),
     grandBase: toHHMMSS(grandBase), grandOvertime: toHHMMSS(grandOnsite + grandOffsite), grandTotal: toHHMMSS(grandBase + grandOnsite + grandOffsite)
@@ -954,31 +1042,28 @@ function generateTimesheetData(clinician, year, month, data, hospitalName, confi
 }
 
 // ============================================================
-// PDF GENERATION (Using jsPDF and autotable)
+// PDF GENERATION (JSPDF)
 // ============================================================
 function buildPDF(data) {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'pt', 'a4'); // A4 dimensions: 595.28 x 841.89 points
+  const doc = new jsPDF('p', 'pt', 'a4');
   const margin = 40;
   let cursorY = margin;
 
-  // 1. HEADER
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text(`${data.clinicianName} — Timesheet — ${data.hospitalName}`, margin, cursorY);
   
   cursorY += 16;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(`Rank: ${data.rank}   |   Persal #: ${data.clinicianId}   |   Period: ${data.startDateStr} to ${data.endDateStr}`, margin, cursorY);
+  doc.setFontSize(9);
+  doc.text(`Rank: ${data.rank}  |  Persal #: ${data.clinicianId}  |  Appt Date: ${data.apptDate}  |  Period: ${data.startDateStr} to ${data.endDateStr}`, margin, cursorY);
   
   cursorY += 10;
   doc.setLineWidth(1.5);
   doc.line(margin, cursorY, 595.28 - margin, cursorY);
-  
   cursorY += 15;
 
-  // 2. MAIN DAYS TABLE
   doc.autoTable({
     startY: cursorY,
     head: [['Day', 'Status', 'Start Time', 'End Time', 'Meal Break', 'Base Hours', '1st On Call', 'Standby']],
@@ -990,24 +1075,18 @@ function buildPDF(data) {
     didParseCell: function(info) {
       if (info.section === 'body') {
         const rowData = data.daysData[info.row.index];
-        if (rowData.isHighlighted) { info.cell.styles.fillColor = [255, 248, 220]; }
-        else if (rowData.isWeekend) { info.cell.styles.fillColor = [242, 242, 242]; }
+        if (rowData.isHighlighted) info.cell.styles.fillColor = [255, 248, 220];
+        else if (rowData.isWeekend) info.cell.styles.fillColor = [242, 242, 242];
       }
     }
   });
 
   cursorY = doc.lastAutoTable.finalY + 20;
 
-  // Handle page break before summaries if close to bottom
-  if (cursorY > 700) {
-    doc.addPage();
-    cursorY = margin;
-  }
+  if (cursorY > 700) { doc.addPage(); cursorY = margin; }
 
-  // 3. SUMMARIES (Weekly & Monthly Side-by-Side)
   const halfWidth = (595.28 - (margin * 2) - 15) / 2;
 
-  // Weekly Totals
   doc.autoTable({
     startY: cursorY,
     margin: { left: margin },
@@ -1020,7 +1099,6 @@ function buildPDF(data) {
 
   const weeklyFinalY = doc.lastAutoTable.finalY;
 
-  // Monthly Totals
   doc.autoTable({
     startY: cursorY,
     margin: { left: margin + halfWidth + 15 },
@@ -1037,7 +1115,6 @@ function buildPDF(data) {
 
   cursorY = Math.max(weeklyFinalY, doc.lastAutoTable.finalY) + 15;
 
-  // 4. LEAVE BOX
   if (data.leaveString) {
     if (cursorY > 750) { doc.addPage(); cursorY = margin; }
     doc.setFont('helvetica', 'normal');
@@ -1049,9 +1126,8 @@ function buildPDF(data) {
     cursorY += 35;
   }
 
-  // 5. SIGNATURES
-  if (cursorY > 750) { doc.addPage(); cursorY = margin; }
-  cursorY += 40; // Spacing for lines
+  if (cursorY > 730) { doc.addPage(); cursorY = margin; }
+  cursorY += 40;
 
   const colWidth = (595.28 - (margin * 2)) / 3;
   doc.setLineWidth(0.5);
@@ -1063,36 +1139,34 @@ function buildPDF(data) {
   const sig3X = margin + (colWidth * 2);
   const lineLen = colWidth - 20;
 
-  // Lines
   doc.line(sig1X, cursorY, sig1X + lineLen, cursorY);
   doc.line(sig2X, cursorY, sig2X + lineLen, cursorY);
   doc.line(sig3X, cursorY, sig3X + lineLen, cursorY);
 
   cursorY += 12;
-  // Labels
   doc.text('Employee', sig1X + (lineLen/2), cursorY, { align: 'center' });
-  doc.text('Certified Correct by Clinical Supervisor', sig2X + (lineLen/2), cursorY, { align: 'center' });
-  doc.text('Approved by CEO / Medical Superintendent', sig3X + (lineLen/2), cursorY, { align: 'center' });
+  doc.text('Clinical Supervisor', sig2X + (lineLen/2), cursorY, { align: 'center' });
+  doc.text('CEO / Superintendent', sig3X + (lineLen/2), cursorY, { align: 'center' });
 
   return doc;
 }
 
 // ============================================================
-// MAIN GENERATION FLOW
+// RUN GENERATION STEP
 // ============================================================
 async function runGeneration() {
   if (!workbook) {
-    log('No Excel file loaded. Please upload your roster file first.', 'err');
+    log('No data loaded. Upload an Excel file or fetch a Google Sheet.', 'err');
     showLog();
     return;
   }
   if (selectedMonths.size === 0) {
-    log('No months selected. Please select at least one month.', 'err');
+    log('No months selected. Select at least one month.', 'err');
     showLog();
     return;
   }
 
-  const year = parseInt(document.getElementById('year-input').value);
+  const year = parseInt(document.getElementById('year-input').value, 10);
   const hospitalName = document.getElementById('hospital-input').value.trim() || 'Hospital';
   
   const config = {
@@ -1107,18 +1181,14 @@ async function runGeneration() {
     friPostCallTime: document.getElementById('fri-post-call-time').value,
   };
 
-  if (!year || year < 2000 || year > 2100) {
-    log('Invalid year entered.', 'err');
-    showLog();
-    return;
-  }
-
   document.getElementById('gen-btn').disabled = true;
   generatedTimesheets = [];
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('results-grid').innerHTML = '';
   showLog();
-  log(`Starting batch for ${year}, months: ${[...selectedMonths].sort((a,b)=>a-b).map(m=>SHORT_MONTHS[m]).join(', ')}`, 'info');
+
+  const sortedMonths = Array.from(selectedMonths).sort((a,b)=>a-b);
+  log(`Starting generation for ${year}, Months: ${sortedMonths.map(m=>SHORT_MONTHS[m]).join(', ')}`, 'info');
   setProgress(5);
 
   let data;
@@ -1131,11 +1201,10 @@ async function runGeneration() {
     return;
   }
 
-  const months = [...selectedMonths].sort((a,b)=>a-b);
-  const total = data.clinicians.length * months.length;
+  const total = data.clinicians.length * sortedMonths.length;
   let done = 0;
 
-  for (const month of months) {
+  for (const month of sortedMonths) {
     for (const clinician of data.clinicians) {
       try {
         const tsData = generateTimesheetData(clinician, year, month, data, hospitalName, config);
@@ -1146,17 +1215,17 @@ async function runGeneration() {
         });
         done++;
         setProgress(Math.round(5 + (done/total)*90));
-        log(`✓ ${clinician.name} — ${MONTH_NAMES[month]} ready`, 'ok');
+        log(`✓ ${clinician.name} — ${MONTH_NAMES[month]} processed`, 'ok');
       } catch(e) {
         log(`✗ ${clinician.name} — ${MONTH_NAMES[month]} failed: ${e.message}`, 'err');
         done++;
       }
-      await new Promise(r => setTimeout(r, 0)); // Yield to keep UI responsive
+      await new Promise(r => setTimeout(r, 0));
     }
   }
 
   setProgress(100);
-  log(`Batch complete — ${generatedTimesheets.length} ready to download`, 'info');
+  log(`Generation complete — ${generatedTimesheets.length} document(s) ready`, 'info');
   renderResults();
   document.getElementById('gen-btn').disabled = false;
 }
@@ -1191,59 +1260,32 @@ function downloadPDF(index) {
 async function downloadAllPDFs() {
   const btn = document.getElementById('dl-all-pdf-btn');
   btn.disabled = true;
-  btn.textContent = 'Downloading... (Check your browser downloads)';
-  log('Starting mass download...', 'info');
-
+  btn.textContent = 'Downloading...';
   for (let i = 0; i < generatedTimesheets.length; i++) {
     downloadPDF(i);
-    // Slight delay to prevent browser throttling multi-downloads
     await new Promise(r => setTimeout(r, 200)); 
   }
-
-  log('All PDFs triggered for download.', 'ok');
   btn.disabled = false;
-  btn.textContent = 'Download All (Zip/Multiple)';
+  btn.textContent = 'Download All PDFs';
 }
 
 // ============================================================
-// REPORTING TOOL EXCEL EXPORT
+// STEP 5: MONTHLY REPORTING TOOL EXCEL EXPORT
 // ============================================================
-
-/**
- * Parse an HH:MM:SS string (or HH:MM) into decimal hours.
- * Returns 0 if the string is empty or unparseable.
- */
 function hhmmToDecimal(str) {
   if (!str || str === '') return 0;
   const parts = str.split(':');
   if (parts.length < 2) return 0;
-  return parseInt(parts[0] || 0) + parseInt(parts[1] || 0) / 60 + parseInt(parts[2] || 0) / 3600;
+  return parseInt(parts[0], 10) + parseInt(parts[1], 10) / 60 + parseInt(parts[2] || 0, 10) / 3600;
 }
 
-/**
- * Convert decimal hours to an Excel time fraction (fraction of 24h).
- * We store as a number and format the cell as [h]:mm:ss so it renders as
- * e.g. "40:00:00" rather than wrapping at 24 h.
- */
-function decimalToExcelTime(hours) {
-  return hours / 24;
-}
+function decimalToExcelTime(hours) { return hours / 24; }
 
-/**
- * For a given clinician's timesheet data, compute weekly normal and OT hours
- * for up to 6 weeks. Returns array of { normalHrs, otHrs } objects.
- *
- * The weeklyData inside tsData already has per-week totals as HH:MM:SS strings
- * in properties: base (normal), onsite (OT on-site), offsite (OT standby).
- * The reporting tool sums onsite + offsite as "overtime hours worked".
- */
 function extractWeeklyHours(tsData) {
   const weeks = [];
-  // weeklyData is filtered to non-zero weeks, label = "Week N"
-  // We need up to 6 slots indexed 1..6
   const byWeek = {};
   (tsData.weeklyData || []).forEach(w => {
-    const idx = parseInt(w.label.replace('Week ', ''));
+    const idx = parseInt(w.label.replace('Week ', ''), 10);
     byWeek[idx] = w;
   });
   for (let i = 1; i <= 6; i++) {
@@ -1258,27 +1300,12 @@ function extractWeeklyHours(tsData) {
   return weeks;
 }
 
-/**
- * Build and trigger download of one reporting-tool .xlsx for a given month.
- * monthTimesheets: array of { label, filename, data } objects all for the same month.
- */
 function buildReportingExcel(monthTimesheets, monthName, year) {
   const wb = XLSX.utils.book_new();
-  const wsName = monthName.substring(0, 31); // sheet names max 31 chars
-
-  // ---- Build the rows array ----
-  // Row 1: merged title row
-  // Row 2: blank / subtitle
-  // Row 3: week header labels (Week 1 .. Week 6 spans, plus totals etc.)
-  // Row 4: sub-headers
-  // Row 5+: data rows
-
-  const COL_COUNT = 27; // A–AA
-
-  // We'll use an array-of-arrays approach then apply styles via cell addresses.
+  const wsName = monthName.substring(0, 31);
+  const COL_COUNT = 27;
   const aoaRows = [];
 
-  // Row 0 (index 0): Main title
   const titleRow = new Array(COL_COUNT).fill('');
   titleRow[0] = 'No.';
   titleRow[1] = 'Surname & Initials';
@@ -1290,27 +1317,25 @@ function buildReportingExcel(monthTimesheets, monthName, year) {
   titleRow[7] = 'Appointment date';
   titleRow[8] = 'Contract end date';
   titleRow[9] = 'Reporting month';
-  titleRow[10] = 'COT Group (2/3)';
-  // Weeks 1-6: each takes 2 cols (Normal | OT)
-  titleRow[11] = 'Week 1 Normal hrs 40hrs';
-  titleRow[12] = 'Week 1 Overtime hours worked';
-  titleRow[13] = 'Week 2 Normal hrs 40hrs';
-  titleRow[14] = 'Week 2 Overtime hours worked';
-  titleRow[15] = 'Week 3 Normal hrs 40hrs';
-  titleRow[16] = 'Week 3 Overtime hours worked';
-  titleRow[17] = 'Week 4 Normal hrs 40hrs';
-  titleRow[18] = 'Week 4 Overtime hours worked';
-  titleRow[19] = 'Week 5 Normal hrs 40hrs';
-  titleRow[20] = 'Week 5 Overtime hours worked';
-  titleRow[21] = 'Week 6 Normal hrs 40hrs';
-  titleRow[22] = 'Week 6 Overtime hours worked';
-  titleRow[23] = 'Total hours worked (normal hours)';
-  titleRow[24] = 'Total hours worked (overtime hours)';
+  titleRow[10] = 'COT Group';
+  titleRow[11] = 'Week 1 Normal hrs';
+  titleRow[12] = 'Week 1 Overtime hrs';
+  titleRow[13] = 'Week 2 Normal hrs';
+  titleRow[14] = 'Week 2 Overtime hrs';
+  titleRow[15] = 'Week 3 Normal hrs';
+  titleRow[16] = 'Week 3 Overtime hrs';
+  titleRow[17] = 'Week 4 Normal hrs';
+  titleRow[18] = 'Week 4 Overtime hrs';
+  titleRow[19] = 'Week 5 Normal hrs';
+  titleRow[20] = 'Week 5 Overtime hrs';
+  titleRow[21] = 'Week 6 Normal hrs';
+  titleRow[22] = 'Week 6 Overtime hrs';
+  titleRow[23] = 'Total Normal Hours';
+  titleRow[24] = 'Total Overtime Hours';
   titleRow[25] = 'Type of leave';
   titleRow[26] = 'No of days taken';
   aoaRows.push(titleRow);
 
-  // Data rows
   monthTimesheets.forEach((ts, idx) => {
     const d = ts.data;
     const weeks = extractWeeklyHours(d);
@@ -1324,9 +1349,9 @@ function buildReportingExcel(monthTimesheets, monthName, year) {
     row[3] = d.rank;
     row[4] = d.hospitalName;
     row[5] = d.hospitalName;
-    row[6] = d.apptNature; // Nature of appointment — not stored in current data model
-    row[7] = d.apptDate; // Appointment date — not in timesheet data
-    row[8] = d.contractEnd; // Contract end — not in timesheet data
+    row[6] = d.apptNature;
+    row[7] = d.apptDate;
+    row[8] = d.contractEnd;
     row[9] = `${monthName} ${year}`;
     row[10] = d.overtimeGroup;
 
@@ -1338,36 +1363,12 @@ function buildReportingExcel(monthTimesheets, monthName, year) {
     row[23] = totalNormal > 0 ? decimalToExcelTime(totalNormal) : '';
     row[24] = totalOT > 0     ? decimalToExcelTime(totalOT)     : '';
     row[25] = d.leaveString || '';
-    row[26] = d.totalLeaveDays || ''; // No of days — aggregate not broken out separately
+    row[26] = d.totalLeaveDays || '';
 
     aoaRows.push(row);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(aoaRows);
-
-  // ---- Cell widths ----
-  ws['!cols'] = [
-    { wch: 5 },  // A No.
-    { wch: 26 }, // B Name
-    { wch: 12 }, // C Persal
-    { wch: 32 }, // D Job title
-    { wch: 14 }, // E Pay point
-    { wch: 14 }, // F Placement
-    { wch: 16 }, // G Nature
-    { wch: 14 }, // H Appt date
-    { wch: 14 }, // I Contract end
-    { wch: 16 }, // J Reporting month
-    { wch: 10 }, // K COT Group
-    // Weeks x6 x2
-    ...Array(12).fill({ wch: 14 }),
-    { wch: 16 }, // W Total normal
-    { wch: 16 }, // X Total OT
-    { wch: 28 }, // Y Leave type
-    { wch: 12 }, // Z No of days
-  ];
-
-  // ---- Apply time format to hour cells ----
-  // Header row is row index 0 (Excel row 1). Data starts at row index 1 (Excel row 2).
   const timeColIndices = [11,12,13,14,15,16,17,18,19,20,21,22,23,24];
   const timeFmt = '[h]:mm:ss';
 
@@ -1381,39 +1382,25 @@ function buildReportingExcel(monthTimesheets, monthName, year) {
     }
   }
 
-  // ---- Header row styling ----
-  // SheetJS community edition doesn't support styles, but we can set row height
-  // and freeze the top row for usability.
-  ws['!freeze'] = { xSplit: 0, ySplit: 1 }; // Freeze header row
-  ws['!rows'] = [{ hpt: 30 }]; // Header row height
-
-  // Append sheet
   XLSX.utils.book_append_sheet(wb, ws, wsName);
-
-  // ---- Trigger download ----
   const filename = `COT_Reporting_Tool_${monthName}_${year}.xlsx`;
   XLSX.writeFile(wb, filename);
   return filename;
 }
 
-/**
- * Main entry point for Step 5.
- */
 function runReportingExport() {
   if (generatedTimesheets.length === 0) {
-    log('No timesheet data found. Please run Step 4 first.', 'err');
+    log('No timesheet data available. Run Step 4 first.', 'err');
     showLog();
     return;
   }
 
-  const year = parseInt(document.getElementById('year-input').value);
-
-  // Group timesheets by month
+  const year = parseInt(document.getElementById('year-input').value, 10);
   const byMonth = {};
+
   generatedTimesheets.forEach(ts => {
-    // Label format: "Name — Month Year"
     const parts = ts.label.split(' — ');
-    const monthYear = parts[parts.length - 1]; // e.g. "January 2026"
+    const monthYear = parts[parts.length - 1];
     const [mn] = monthYear.split(' ');
     if (!byMonth[mn]) byMonth[mn] = [];
     byMonth[mn].push(ts);
@@ -1426,22 +1413,15 @@ function runReportingExport() {
   grid.innerHTML = '';
   document.getElementById('report-results-section').style.display = 'block';
 
-  const generatedFiles = [];
-
   Object.entries(byMonth).forEach(([monthName, tsList]) => {
     try {
-      // Sort by clinician name for consistent ordering
       tsList.sort((a, b) => a.data.clinicianName.localeCompare(b.data.clinicianName));
       const filename = buildReportingExcel(tsList, monthName, year);
-      generatedFiles.push(filename);
       log(`✓ Reporting tool exported: ${filename}`, 'ok');
 
       const card = document.createElement('div');
       card.className = 'result-card';
-      card.innerHTML = `
-        <div class="name">📊 ${filename}</div>
-        <button class="dl-btn" onclick="buildReportingExcel(${JSON.stringify(tsList.map(t=>({label:t.label,filename:t.filename,data:t.data})))}, '${monthName}', ${year})">↓ Re-download</button>
-      `;
+      card.innerHTML = `<div class="name">📊 ${filename}</div>`;
       grid.appendChild(card);
     } catch(e) {
       log(`✗ Failed to export ${monthName}: ${e.message}`, 'err');
@@ -1449,373 +1429,37 @@ function runReportingExport() {
   });
 
   showLog();
-  log(`Reporting export complete — ${generatedFiles.length} file(s) generated.`, 'info');
   reportBtn.disabled = false;
 }
 
+// ============================================================
+// TEMPLATE DOWNLOAD
+// ============================================================
 function downloadTemplate() {
   const wb = XLSX.utils.book_new();
 
-  // ---- Sheet 1: Persal Details ----
-  const persalHeaders = [
-    'Name', 'Persal Number', 'Role',
-    'Appointment Date', 'Overtime Group', 'Contract End'
-  ];
-  const persalExample = [
-    'Jane Smith', '12345678', 'Medical Officer Grade 1',
-    '01/01/2025', 'Contract','3.2', '31/01/2025'
-  ];
-  const persalNote = [
-    '← Full name as it appears on roster', '← 8-digit Persal number', '', '', '← Contract / Permanent',
-    '← Usually 3.2', '← DD/MM/YYYY'
-  ];
-  const persalWs = XLSX.utils.aoa_to_sheet([persalHeaders, persalExample, persalNote]);
-  persalWs['!cols'] = [
-    {wch:22},{wch:14},{wch:10},{wch:14},{wch:30},
-    {wch:16},{wch:14},{wch:12},{wch:12},
-    {wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:12}
-  ];
+  const persalHeaders = ['Name', 'Persal Number', 'Role', 'Appointment Date', 'Nature of Appointment', 'Overtime Group', 'Contract End'];
+  const persalExample = ['Jane Smith', '12345678', 'Medical Officer Grade 1', '2025-01-01', 'Permanent', '3.2', 'N/A'];
+  const persalWs = XLSX.utils.aoa_to_sheet([persalHeaders, persalExample]);
   XLSX.utils.book_append_sheet(wb, persalWs, 'Persal Details');
 
-  // ---- Sheet 2: Leave Schedule ----
-  const leaveHeaders = ['Name', 'Leave Type', 'Leave Start', 'Leave End', 'Total Working Days'];
-  const leaveExamples = [
-    ['Jane Smith', 'Annual Leave', '2026-01-05', '2026-01-07', 3],
-    ['Jane Smith', 'Sick Leave',   '2026-02-10', '2026-02-10', 1],
-  ];
-  const leaveNote = [
-    '← Must match name in Persal Details exactly',
-    '← Annual Leave / Sick Leave / Family Responsibility Leave / Other',
-    '← YYYY-MM-DD or Excel date serial',
-    '← YYYY-MM-DD or Excel date serial',
-    '← Working days only (excluding weekends)'
-  ];
-  const leaveWs = XLSX.utils.aoa_to_sheet([leaveHeaders, ...leaveExamples, leaveNote]);
-  leaveWs['!cols'] = [{wch:22},{wch:30},{wch:16},{wch:16},{wch:20}];
+  const leaveHeaders = ['Name', 'Leave Type', 'Leave Start', 'Leave End'];
+  const leaveExamples = [['Jane Smith', 'Annual Leave', '2026-01-05', '2026-01-07']];
+  const leaveWs = XLSX.utils.aoa_to_sheet([leaveHeaders, ...leaveExamples]);
   XLSX.utils.book_append_sheet(wb, leaveWs, 'Leave Schedule');
 
-  // ---- Sheet 3: Call Roster ----
-  const rosterHeaders = [
-    'Date', 'Day Label', 'OT Start', 'OT End',
-    'On-Call Name 1', 'On-Call Name 2', 'On-Call Name 3', 'Standby Name'
-  ];
-  const rosterExamples = [
-    ['2026-01-04', 'Sun AM', '08:00', '20:00', 'Jane Smith', 'John Doe', '', ''],
-    ['2026-01-04', 'Sun PM', '19:00', '09:00',   'Jane Smith', '',         '', 'John Doe'],
-    ['2026-01-05', 'Mon',    '16:00',   '07:30',   'John Doe',  '',         '', ''],
-    ['2026-01-10', 'Sat AM', '08:00', '20:00', 'Jane Smith', '',         '', ''],
-  ];
-  const rosterNote = [
-    '← Excel date serial or YYYY-MM-DD (can be multiple entries on the same date)',
-    '← Label only (not used)',
-    '← Time as hh:mm',
-    '← Time as hh:mm',
-    '← Names must match Persal Details exactly',
-    '← Second on-call (optional)',
-    '← Third on-call (optional)',
-    '← Standby/2nd-call doctor (earns 1/3 rate)'
-  ];
-  const rosterWs = XLSX.utils.aoa_to_sheet([rosterHeaders, ...rosterExamples, rosterNote]);
-  rosterWs['!cols'] = [
-    {wch:16},{wch:12},{wch:12},{wch:12},
-    {wch:22},{wch:22},{wch:22},{wch:22},
-    {wch:4},{wch:10},{wch:14},{wch:8}
-  ];
+  const rosterHeaders = ['Date', 'Day Label', 'OT Start', 'OT End', 'On-Call Name 1', 'On-Call Name 2', 'On-Call Name 3', 'Standby Name'];
+  const rosterExamples = [['2026-01-04', 'Sun AM', '08:00', '20:00', 'Jane Smith', '', '', '']];
+  const rosterWs = XLSX.utils.aoa_to_sheet([rosterHeaders, ...rosterExamples]);
   XLSX.utils.book_append_sheet(wb, rosterWs, 'Call Roster');
 
-  // ---- Sheet 4: Public Holidays ----
-  const holidayHeaders = ['Date', 'Classification', '', '', 'Day', 'Type'];
-  const holidayExamples = [
-    ['2026-01-01', 'Public Holiday', '', '', 'Thu', 'Weekday'],
-    ['2026-03-21', 'Public Holiday', '', '', 'Sat', 'Weekend'],
-    ['2026-04-17', 'Public Holiday', '', '', 'Fri', 'Weekday'],
-  ];
-  const holidayNote = [
-    '← Excel date serial or YYYY-MM-DD',
-    '← Must say "Public Holiday"',
-    '', '', '', ''
-  ];
-  const holidayWs = XLSX.utils.aoa_to_sheet([holidayHeaders, ...holidayExamples, holidayNote]);
-  holidayWs['!cols'] = [{wch:16},{wch:18},{wch:4},{wch:4},{wch:10},{wch:10}];
+  const holidayHeaders = ['Date', 'Classification'];
+  const holidayExamples = [['2026-01-01', 'Public Holiday']];
+  const holidayWs = XLSX.utils.aoa_to_sheet([holidayHeaders, ...holidayExamples]);
   XLSX.utils.book_append_sheet(wb, holidayWs, 'Public Holidays');
-
-  // ---- Sheet 5: README ----
-  const readmeRows = [
-    ['TIMESHEET GENERATOR — UPLOAD TEMPLATE'],
-    [''],
-    ['This workbook must contain exactly four sheets (tabs) named:'],
-    ['  1. Persal Details'],
-    ['  2. Leave Schedule'],
-    ['  3. Call Roster'],
-    ['  4. Public Holidays'],
-    [''],
-    ['Each sheet has example rows and notes in the row below the examples.'],
-    ['Delete the example and note rows before uploading — keep only the header row and your real data.'],
-    [''],
-    ['KEY RULES'],
-    ['• Doctor names must be IDENTICAL across all sheets (Persal Details, Leave Schedule, Call Roster).'],
-    ['  Even a trailing space will cause a mismatch. Copy-paste from Persal Details to be safe.'],
-    ['• Dates can be Excel date serials (numbers) or text in YYYY-MM-DD format.'],
-    ['• Times in Call Roster should be in hh:mm format'],
-    ['• Leave types recognised: Annual Leave, Sick Leave, Family Responsibility Leave, Other'],
-    ['• The tool reads the "Persal Details" sheet for the list of doctors to generate timesheets for.'],
-    ['  Anyone not listed there will be ignored even if they appear in the roster.'],
-  ];
-  const readmeWs = XLSX.utils.aoa_to_sheet(readmeRows);
-  readmeWs['!cols'] = [{wch:90}];
-  XLSX.utils.book_append_sheet(wb, readmeWs, 'README');
 
   XLSX.writeFile(wb, 'Timesheet_Upload_Template.xlsx');
 }
-
-// ============================================================
-// REPORTING TOOL EXCEL EXPORT
-// ============================================================
-
-/**
- * Parse an HH:MM:SS string (or HH:MM) into decimal hours.
- * Returns 0 if the string is empty or unparseable.
- */
-function hhmmToDecimal(str) {
-  if (!str || str === '') return 0;
-  const parts = str.split(':');
-  if (parts.length < 2) return 0;
-  return parseInt(parts[0] || 0) + parseInt(parts[1] || 0) / 60 + parseInt(parts[2] || 0) / 3600;
-}
-
-/**
- * Convert decimal hours to an Excel time fraction (fraction of 24h).
- * We store as a number and format the cell as [h]:mm:ss so it renders as
- * e.g. "40:00:00" rather than wrapping at 24 h.
- */
-function decimalToExcelTime(hours) {
-  return hours / 24;
-}
-
-/**
- * For a given clinician's timesheet data, compute weekly normal and OT hours
- * for up to 6 weeks. Returns array of { normalHrs, otHrs } objects.
- *
- * The weeklyData inside tsData already has per-week totals as HH:MM:SS strings
- * in properties: base (normal), onsite (OT on-site), offsite (OT standby).
- * The reporting tool sums onsite + offsite as "overtime hours worked".
- */
-function extractWeeklyHours(tsData) {
-  const weeks = [];
-  // weeklyData is filtered to non-zero weeks, label = "Week N"
-  // We need up to 6 slots indexed 1..6
-  const byWeek = {};
-  (tsData.weeklyData || []).forEach(w => {
-    const idx = parseInt(w.label.replace('Week ', ''));
-    byWeek[idx] = w;
-  });
-  for (let i = 1; i <= 6; i++) {
-    const w = byWeek[i];
-    if (w) {
-      const ot = hhmmToDecimal(w.onsite) + hhmmToDecimal(w.offsite);
-      weeks.push({ normalHrs: hhmmToDecimal(w.base), otHrs: ot });
-    } else {
-      weeks.push({ normalHrs: 0, otHrs: 0 });
-    }
-  }
-  return weeks;
-}
-
-/**
- * Build and trigger download of one reporting-tool .xlsx for a given month.
- * monthTimesheets: array of { label, filename, data } objects all for the same month.
- */
-function buildReportingExcel(monthTimesheets, monthName, year) {
-  const wb = XLSX.utils.book_new();
-  const wsName = monthName.substring(0, 31); // sheet names max 31 chars
-
-  // ---- Build the rows array ----
-  // Row 1: merged title row
-  // Row 2: blank / subtitle
-  // Row 3: week header labels (Week 1 .. Week 6 spans, plus totals etc.)
-  // Row 4: sub-headers
-  // Row 5+: data rows
-
-  const COL_COUNT = 27; // A–AA
-
-  // We'll use an array-of-arrays approach then apply styles via cell addresses.
-  const aoaRows = [];
-
-  // Row 0 (index 0): Main title
-  const titleRow = new Array(COL_COUNT).fill('');
-  titleRow[0] = 'No.';
-  titleRow[1] = 'Surname & Initials';
-  titleRow[2] = 'Persal no.';
-  titleRow[3] = 'Job title';
-  titleRow[4] = 'Pay point';
-  titleRow[5] = 'Placement (home body)';
-  titleRow[6] = 'Nature of appointment';
-  titleRow[7] = 'Appointment date';
-  titleRow[8] = 'Contract end date';
-  titleRow[9] = 'Reporting month';
-  titleRow[10] = 'COT Group (2/3)';
-  // Weeks 1-6: each takes 2 cols (Normal | OT)
-  titleRow[11] = 'Week 1 Normal hrs 40hrs';
-  titleRow[12] = 'Week 1 Overtime hours worked';
-  titleRow[13] = 'Week 2 Normal hrs 40hrs';
-  titleRow[14] = 'Week 2 Overtime hours worked';
-  titleRow[15] = 'Week 3 Normal hrs 40hrs';
-  titleRow[16] = 'Week 3 Overtime hours worked';
-  titleRow[17] = 'Week 4 Normal hrs 40hrs';
-  titleRow[18] = 'Week 4 Overtime hours worked';
-  titleRow[19] = 'Week 5 Normal hrs 40hrs';
-  titleRow[20] = 'Week 5 Overtime hours worked';
-  titleRow[21] = 'Week 6 Normal hrs 40hrs';
-  titleRow[22] = 'Week 6 Overtime hours worked';
-  titleRow[23] = 'Total hours worked (normal hours)';
-  titleRow[24] = 'Total hours worked (overtime hours)';
-  titleRow[25] = 'Type of leave';
-  titleRow[26] = 'No of days taken';
-  aoaRows.push(titleRow);
-
-  // Data rows
-  monthTimesheets.forEach((ts, idx) => {
-    const d = ts.data;
-    const weeks = extractWeeklyHours(d);
-    const totalNormal = weeks.reduce((s, w) => s + w.normalHrs, 0);
-    const totalOT = weeks.reduce((s, w) => s + w.otHrs, 0);
-
-    const row = new Array(COL_COUNT).fill('');
-    row[0] = idx + 1;
-    row[1] = d.clinicianName;
-    row[2] = d.clinicianId;
-    row[3] = d.rank;
-    row[4] = 'Madwaleni';
-    row[5] = 'Madwaleni';
-    row[6] = ''; // Nature of appointment — not stored in current data model
-    row[7] = ''; // Appointment date — not in timesheet data
-    row[8] = ''; // Contract end — not in timesheet data
-    row[9] = `${monthName} ${year}`;
-    row[10] = 3.2;
-
-    for (let w = 0; w < 6; w++) {
-      row[11 + w * 2]     = weeks[w].normalHrs > 0 ? decimalToExcelTime(weeks[w].normalHrs) : '';
-      row[11 + w * 2 + 1] = weeks[w].otHrs > 0     ? decimalToExcelTime(weeks[w].otHrs)     : '';
-    }
-
-    row[23] = totalNormal > 0 ? decimalToExcelTime(totalNormal) : '';
-    row[24] = totalOT > 0     ? decimalToExcelTime(totalOT)     : '';
-    row[25] = d.leaveString || '';
-    row[26] = ''; // No of days — aggregate not broken out separately
-
-    aoaRows.push(row);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(aoaRows);
-
-  // ---- Cell widths ----
-  ws['!cols'] = [
-    { wch: 5 },  // A No.
-    { wch: 26 }, // B Name
-    { wch: 12 }, // C Persal
-    { wch: 32 }, // D Job title
-    { wch: 14 }, // E Pay point
-    { wch: 14 }, // F Placement
-    { wch: 16 }, // G Nature
-    { wch: 14 }, // H Appt date
-    { wch: 14 }, // I Contract end
-    { wch: 16 }, // J Reporting month
-    { wch: 10 }, // K COT Group
-    // Weeks x6 x2
-    ...Array(12).fill({ wch: 14 }),
-    { wch: 16 }, // W Total normal
-    { wch: 16 }, // X Total OT
-    { wch: 28 }, // Y Leave type
-    { wch: 12 }, // Z No of days
-  ];
-
-  // ---- Apply time format to hour cells ----
-  // Header row is row index 0 (Excel row 1). Data starts at row index 1 (Excel row 2).
-  const timeColIndices = [11,12,13,14,15,16,17,18,19,20,21,22,23,24];
-  const timeFmt = '[h]:mm:ss';
-
-  for (let r = 1; r < aoaRows.length; r++) {
-    for (const ci of timeColIndices) {
-      const cellRef = XLSX.utils.encode_cell({ r, c: ci });
-      if (ws[cellRef] && ws[cellRef].v !== '') {
-        ws[cellRef].t = 'n';
-        ws[cellRef].z = timeFmt;
-      }
-    }
-  }
-
-  // ---- Header row styling ----
-  // SheetJS community edition doesn't support styles, but we can set row height
-  // and freeze the top row for usability.
-  ws['!freeze'] = { xSplit: 0, ySplit: 1 }; // Freeze header row
-  ws['!rows'] = [{ hpt: 30 }]; // Header row height
-
-  // Append sheet
-  XLSX.utils.book_append_sheet(wb, ws, wsName);
-
-  // ---- Trigger download ----
-  const filename = `COT_Reporting_Tool_${monthName}_${year}.xlsx`;
-  XLSX.writeFile(wb, filename);
-  return filename;
-}
-
-/**
- * Main entry point for Step 5.
- */
-function runReportingExport() {
-  if (generatedTimesheets.length === 0) {
-    log('No timesheet data found. Please run Step 4 first.', 'err');
-    showLog();
-    return;
-  }
-
-  const year = parseInt(document.getElementById('year-input').value);
-
-  // Group timesheets by month
-  const byMonth = {};
-  generatedTimesheets.forEach(ts => {
-    // Label format: "Name — Month Year"
-    const parts = ts.label.split(' — ');
-    const monthYear = parts[parts.length - 1]; // e.g. "January 2026"
-    const [mn] = monthYear.split(' ');
-    if (!byMonth[mn]) byMonth[mn] = [];
-    byMonth[mn].push(ts);
-  });
-
-  const reportBtn = document.getElementById('report-btn');
-  reportBtn.disabled = true;
-
-  const grid = document.getElementById('report-results-grid');
-  grid.innerHTML = '';
-  document.getElementById('report-results-section').style.display = 'block';
-
-  const generatedFiles = [];
-
-  Object.entries(byMonth).forEach(([monthName, tsList]) => {
-    try {
-      // Sort by clinician name for consistent ordering
-      tsList.sort((a, b) => a.data.clinicianName.localeCompare(b.data.clinicianName));
-      const filename = buildReportingExcel(tsList, monthName, year);
-      generatedFiles.push(filename);
-      log(`✓ Reporting tool exported: ${filename}`, 'ok');
-
-      const card = document.createElement('div');
-      card.className = 'result-card';
-      card.innerHTML = `
-        <div class="name">📊 ${filename}</div>
-        <button class="dl-btn" onclick="buildReportingExcel(${JSON.stringify(tsList.map(t=>({label:t.label,filename:t.filename,data:t.data})))}, '${monthName}', ${year})">↓ Re-download</button>
-      `;
-      grid.appendChild(card);
-    } catch(e) {
-      log(`✗ Failed to export ${monthName}: ${e.message}`, 'err');
-    }
-  });
-
-  showLog();
-  log(`Reporting export complete — ${generatedFiles.length} file(s) generated.`, 'info');
-  reportBtn.disabled = false;
-}
 </script>
-
 </body>
 </html>
