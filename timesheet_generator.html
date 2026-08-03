@@ -114,7 +114,7 @@
     line-height: 1.5;
   }
 
-  /* ---- TABS FOR FILE VS GOOGLE SHEETS ---- */
+  /* ---- DATA SOURCE TABS ---- */
   .tab-group {
     display: flex;
     gap: 10px;
@@ -428,18 +428,18 @@
 
   <header>
     <h1>Monthly Timesheet Generator</h1>
-    <p class="sub">Upload your roster data via Excel or Google Sheets, generate print-ready PDFs, and export monthly reporting tools.</p>
+    <p class="sub">Upload your roster workbook, generate print-ready PDFs, and export monthly reporting tools.</p>
   </header>
 
-  <!-- STEP 1: UPLOAD / GOOGLE SHEETS SOURCE -->
+  <!-- STEP 1: EXCEL WORKBOOK SOURCE -->
   <div class="section" id="step-upload">
     <div class="section-label">Step 1 — Data Source</div>
     <h2>Upload Roster Data</h2>
-    <p class="hint">Upload your roster Excel file or link a public Google Sheet. It must contain four sheets: <strong>Persal Details, Leave Schedule, Call Roster, Public Holidays</strong>.</p>
+    <p class="hint">Upload your roster workbook as an Excel file. It must contain four sheets: <strong>Persal Details, Leave Schedule, Call Roster, Public Holidays</strong>.</p>
 
     <div class="tab-group">
       <button class="tab-btn active" onclick="switchTab('excel-tab', this)">Excel File Upload</button>
-      <button class="tab-btn" onclick="switchTab('gsheets-tab', this)">Google Sheets Link</button>
+      <button class="tab-btn" onclick="switchTab('gsheets-tab', this)">From Google Sheets</button>
     </div>
 
     <!-- Excel Tab -->
@@ -457,14 +457,19 @@
       </div>
     </div>
 
-    <!-- Google Sheets Tab -->
+    <!-- Google Sheets Export Guide Tab -->
     <div id="gsheets-tab" class="tab-content">
-      <label for="gsheet-url">Google Sheets Shareable / Published URL</label>
-      <div style="display:flex; gap:10px;">
-        <input type="url" id="gsheet-url" placeholder="https://docs.google.com/spreadsheets/d/...">
-        <button class="btn-secondary" style="white-space:nowrap;" onclick="loadGoogleSheet()">Fetch Sheet</button>
+      <div class="sheet-card" style="background: var(--accent-light); border-color: rgba(45,90,61,0.2);">
+        <div class="sheet-name">Download your Google Sheet as an Excel file</div>
+        <ol style="margin: 8px 0 0 20px; font-size: 13px; color: var(--ink-muted); line-height: 1.8;">
+          <li>Open the roster workbook in Google Sheets.</li>
+          <li>Select <strong>File → Download → Microsoft Excel (.xlsx)</strong>.</li>
+          <li>Return to the <strong>Excel File Upload</strong> tab and upload the downloaded file.</li>
+        </ol>
+        <p style="font-size:12px; color:var(--ink-muted); margin-top:10px;">
+          No sharing or publishing changes are required. Ensure the downloaded workbook still contains the four required sheets listed below.
+        </p>
       </div>
-      <p style="font-size:12px; color:var(--ink-muted); margin-top:8px;">Ensure the Google Sheet permission is set to "Anyone with the link can view".</p>
     </div>
 
     <!-- Data Spec Guide -->
@@ -496,8 +501,9 @@
           <li>Col A — Date</li>
           <li>Col C — OT start time</li>
           <li>Col D — OT end time</li>
-          <li>Col E/F/G — On-call names</li>
-          <li>Col H — Standby name</li>
+          <li>Col F/G — On-call names</li>
+          <li>Col H — Standby name [calculated 1:3] </li>
+	  <li> Col I - Senior cover [calculated 1:1] </li>
         </ul>
       </div>
       <div class="sheet-card">
@@ -684,7 +690,7 @@ function setProgress(pct) {
 }
 
 // ============================================================
-// FILE UPLOAD & GOOGLE SHEETS HANDLERS
+// FILE UPLOAD HANDLERS
 // ============================================================
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -715,45 +721,6 @@ function loadFile(file) {
     }
   };
   reader.readAsArrayBuffer(file);
-}
-
-async function loadGoogleSheet() {
-  const urlInput = document.getElementById('gsheet-url').value.trim();
-  if (!urlInput) {
-    log('Please enter a valid Google Sheets URL.', 'err');
-    showLog();
-    return;
-  }
-
-  // Extract Sheet ID
-  const match = urlInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  if (!match) {
-    log('Invalid Google Sheets URL format.', 'err');
-    showLog();
-    return;
-  }
-  const sheetId = match[1];
-  log(`Fetching Google Sheet ID: ${sheetId}...`, 'info');
-  showLog();
-
-  const requiredSheets = ['Persal Details', 'Leave Schedule', 'Call Roster', 'Public Holidays'];
-  const newWb = XLSX.utils.book_new();
-
-  try {
-    for (const sheetName of requiredSheets) {
-      const fetchUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-      const resp = await fetch(fetchUrl);
-      if (!resp.ok) throw new Error(`Failed to load sheet "${sheetName}". Verify sharing settings.`);
-      const csvText = await resp.text();
-      const tempWb = XLSX.read(csvText, { type: 'string', cellDates: true });
-      const firstSheet = tempWb.Sheets[tempWb.SheetNames[0]];
-      XLSX.utils.book_append_sheet(newWb, firstSheet, sheetName);
-    }
-    workbook = newWb;
-    log(`Successfully imported Google Sheet with all required tabs!`, 'ok');
-  } catch (err) {
-    log(`Error importing Google Sheet: ${err.message}`, 'err');
-  }
 }
 
 // ============================================================
@@ -878,7 +845,7 @@ function parseWorkbook(wb) {
     rosterEntries.push({
       date: parseDateCell(r[0]),
       otStart: r[2], otEnd: r[3],
-      onCall: [r[4], r[5], r[6]].map(v => v ? String(v).trim() : null).filter(Boolean),
+      onCall: [r[5], r[6], r[8]].map(v => v ? String(v).trim() : null).filter(Boolean),
       standby: r[7] ? String(r[7]).trim() : null,
     });
   }
@@ -1156,7 +1123,7 @@ function buildPDF(data) {
 // ============================================================
 async function runGeneration() {
   if (!workbook) {
-    log('No data loaded. Upload an Excel file or fetch a Google Sheet.', 'err');
+    log('No data loaded. Upload an Excel workbook first.', 'err');
     showLog();
     return;
   }
@@ -1448,8 +1415,8 @@ function downloadTemplate() {
   const leaveWs = XLSX.utils.aoa_to_sheet([leaveHeaders, ...leaveExamples]);
   XLSX.utils.book_append_sheet(wb, leaveWs, 'Leave Schedule');
 
-  const rosterHeaders = ['Date', 'Day Label', 'OT Start', 'OT End', 'On-Call Name 1', 'On-Call Name 2', 'On-Call Name 3', 'Standby Name'];
-  const rosterExamples = [['2026-01-04', 'Sun AM', '08:00', '20:00', 'Jane Smith', '', '', '']];
+  const rosterHeaders = ['Date', 'Day Label', 'OT Start', 'OT End', 'OT Hours', 'On-Call Name 1', 'On-Call Name 2', 'Standby', 'Senior'];
+  const rosterExamples = [['2026-01-04', 'Sun AM', '08:00', '20:00', '12:00' , 'Jane Smith', '', '', '']];
   const rosterWs = XLSX.utils.aoa_to_sheet([rosterHeaders, ...rosterExamples]);
   XLSX.utils.book_append_sheet(wb, rosterWs, 'Call Roster');
 
