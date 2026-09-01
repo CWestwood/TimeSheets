@@ -6,7 +6,7 @@
 <title>Configurable Monthly Timesheet Generator</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Jost:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -18,12 +18,12 @@
     --accent:#2d5a3d; --accent-light:#e8f0ea; --accent-mid:#4a7c5e; --warn:#8b4513; --warn-light:#fdf0e8;
     --danger:#8b2f2f; --danger-light:#f9eaea; --info:#315d7a; --info-light:#eaf2f7;
     --border:rgba(26,25,20,.12); --border-strong:rgba(26,25,20,.22); --radius:8px; --radius-lg:14px;
-    --font-head:'Jost',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif; --font-mono:'DM Mono',monospace;
+    --font-head:'Jost','DM Sans',system-ui,sans-serif; --font-body:'DM Sans',system-ui,sans-serif; --font-mono:'DM Sans',system-ui,sans-serif;
   }
   body { font-family:var(--font-body); background:var(--bg); color:var(--ink); min-height:100vh; font-size:15px; line-height:1.55; }
   .shell { max-width:1180px; margin:0 auto; padding:0 24px 80px; }
   header { padding:44px 0 30px; border-bottom:1px solid var(--border-strong); margin-bottom:30px; }
-  header h1 { font-family:var(--font-head); font-size:34px; font-weight:300; line-height:1.15; }
+  header h1 { font-family:var(--font-head); font-size:34px; font-weight:500; line-height:1.15; letter-spacing:-.02em; }
   header p.sub { margin-top:9px; color:var(--ink-muted); font-size:14px; }
   .privacy-note { margin-top:14px; padding:10px 13px; border-radius:var(--radius); background:var(--accent-light); color:var(--accent); font-size:12px; display:inline-block; }
   .section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:26px 30px; margin-bottom:18px; }
@@ -52,7 +52,7 @@
   .btn-ghost { border:1px solid var(--border-strong); background:var(--bg); color:var(--ink-muted); }
   .btn-ghost:hover { border-color:var(--accent-mid); color:var(--accent); }
   .btn-danger { border:1px solid var(--danger); background:var(--danger-light); color:var(--danger); }
-  .generate-btn { display:block; width:100%; padding:15px; border:0; border-radius:var(--radius); background:var(--accent); color:white; font-family:var(--font-head); font-size:17px; font-style:italic; cursor:pointer; margin-top:8px; }
+  .generate-btn { display:block; width:100%; padding:15px; border:0; border-radius:var(--radius); background:var(--accent); color:white; font-family:var(--font-head); font-size:16px; font-weight:500; cursor:pointer; margin-top:8px; }
   .generate-btn:hover { background:var(--accent-mid); }
   .generate-btn:disabled { background:var(--ink-faint); cursor:not-allowed; }
   .upload-zone { border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:28px 20px; text-align:center; cursor:pointer; position:relative; }
@@ -263,7 +263,7 @@
     <div class="section" id="step-review">
       <div class="section-label">Interpreted roster</div>
       <h2>Review interpreted assignments</h2>
-      <p class="hint">Correct unmatched names or an exceptional factor here. Name corrections are remembered as aliases when the facility profile is saved.</p>
+      <p class="hint">Correct unmatched names or an exceptional factor here. Name corrections are remembered as aliases when the facility profile is saved. Simultaneous roles for the same employee are consolidated and credited once using the highest applicable factor.</p>
       <div id="review-summary" class="summary-grid"></div>
       <div id="review-notices"></div>
       <div class="selection-toolbar">
@@ -696,14 +696,14 @@ function parseAndReview(){
 }
 function renderReview(){renderReviewSummary();renderReviewTable();}
 function renderReviewSummary(){
-  const unmatched=reviewAssignments.filter(a=>!a.clinicianId).length, badTimes=reviewAssignments.filter(a=>!a.date||!Number.isFinite(a.duration)).length, invalidFactors=reviewAssignments.filter(a=>!Number.isFinite(a.factor)).length;
+  const unmatched=reviewAssignments.filter(a=>!a.clinicianId).length, badTimes=reviewAssignments.filter(a=>!a.date||!Number.isFinite(a.duration)).length, invalidFactors=reviewAssignments.filter(a=>!Number.isFinite(a.factor)).length, overlaps=simultaneousAssignmentCount();
   const el=document.getElementById('review-summary'); el.innerHTML=`<div class="summary-card"><div class="value">${reviewAssignments.length}</div><div class="label">Roster assignments</div></div><div class="summary-card"><div class="value">${parsedData.clinicians.length}</div><div class="label">Staff records</div></div><div class="summary-card"><div class="value">${unmatched}</div><div class="label">Unmatched names</div></div><div class="summary-card"><div class="value">${badTimes+invalidFactors}</div><div class="label">Time / factor problems</div></div>`;
-  const notices=document.getElementById('review-notices');const msgs=[];if(unmatched)msgs.push(`${unmatched} roster name${unmatched===1?' is':'s are'} not linked to a staff record.`);if(badTimes)msgs.push(`${badTimes} assignment${badTimes===1?' has':'s have'} an unreadable date or time.`);if(invalidFactors)msgs.push(`${invalidFactors} assignment${invalidFactors===1?' has':'s have'} an invalid factor.`);notices.innerHTML=msgs.length?`<div class="notice warn">⚠ ${msgs.join(' ')}</div>`:`<div class="notice info">✓ No roster-linking, date/time or factor problems detected.</div>`;
+  const notices=document.getElementById('review-notices');const warnings=[];if(unmatched)warnings.push(`${unmatched} roster name${unmatched===1?' is':'s are'} not linked to a staff record.`);if(badTimes)warnings.push(`${badTimes} assignment${badTimes===1?' has':'s have'} an unreadable date or time.`);if(invalidFactors)warnings.push(`${invalidFactors} assignment${invalidFactors===1?' has':'s have'} an invalid factor.`);let html=warnings.length?`<div class="notice warn">⚠ ${warnings.join(' ')}</div>`:`<div class="notice info">✓ No roster-linking, date/time or factor problems detected.</div>`;if(overlaps)html+=`<div class="notice info">↔ ${overlaps} simultaneous role overlap${overlaps===1?'':'s'} detected. Overlapping roles for the same employee will be counted once, using the highest applicable factor for each overlapping period.</div>`;notices.innerHTML=html;
 }
 function clinicianOptions(selectedId){return `<option value="">— Unmatched —</option>`+parsedData.clinicians.map(c=>`<option value="${escapeHtml(c.id)}" ${c.id===selectedId?'selected':''}>${escapeHtml(c.name)}${c.persal?' · '+escapeHtml(c.persal):''}</option>`).join('');}
 function renderReviewTable(){
   const body=document.getElementById('review-body');body.innerHTML='';const problemsOnly=document.getElementById('problems-only')?.checked;
-  reviewAssignments.forEach((a,i)=>{const problem=!a.clinicianId||!a.date||!Number.isFinite(a.duration)||!Number.isFinite(a.factor);if(problemsOnly&&!problem)return;const credited=Number.isFinite(a.duration)&&Number.isFinite(a.factor)?a.duration*a.factor:NaN;const status=!a.clinicianId?'Unmatched':(!a.date||!Number.isFinite(a.duration)||!Number.isFinite(a.factor))?'Check':'OK';const cls=status==='OK'?'':status==='Check'?'error':'problem';const tr=document.createElement('tr');tr.className=cls;tr.innerHTML=`<td>${a.date?escapeHtml(formatDateDisplay(a.date)):'—'}</td><td>${a.rowNumber}</td><td>${escapeHtml(a.roleLabel)}</td><td>${escapeHtml(a.sourceName)}</td><td><select onchange="updateAssignmentClinician(${i},this.value)">${clinicianOptions(a.clinicianId)}</select></td><td>${escapeHtml(a.start||'—')}</td><td>${escapeHtml(a.end||'—')}</td><td>${Number.isFinite(a.duration)?a.duration.toFixed(2)+' h':'—'}</td><td><input type="text" value="${escapeHtml(a.factorText)}" onchange="updateAssignmentFactor(${i},this.value,this)"></td><td id="credit-${i}">${Number.isFinite(credited)?credited.toFixed(2)+' h':'—'}</td><td><span class="pill ${status==='OK'?'ok':status==='Check'?'err':'warn'}">${status}</span></td>`;body.appendChild(tr);});
+  reviewAssignments.forEach((a,i)=>{const problem=!a.clinicianId||!a.date||!Number.isFinite(a.duration)||!Number.isFinite(a.factor);if(problemsOnly&&!problem)return;const credited=Number.isFinite(a.duration)&&Number.isFinite(a.factor)?a.duration*a.factor:NaN;const exactOverlap=a.clinicianId&&a.date?reviewAssignments.filter((x,j)=>j!==i&&x.clinicianId===a.clinicianId&&x.date&&toDateKey(x.date)===toDateKey(a.date)&&x.start===a.start&&x.end===a.end&&Number.isFinite(x.factor)):[];const combinedFactor=exactOverlap.length?Math.max(a.factor,...exactOverlap.map(x=>x.factor)):a.factor;const combinedCredit=exactOverlap.length&&Number.isFinite(a.duration)&&Number.isFinite(combinedFactor)?a.duration*combinedFactor:credited;const status=!a.clinicianId?'Unmatched':(!a.date||!Number.isFinite(a.duration)||!Number.isFinite(a.factor))?'Check':exactOverlap.length?'Overlap':'OK';const cls=status==='OK'||status==='Overlap'?'':status==='Check'?'error':'problem';const creditText=exactOverlap.length?`${combinedCredit.toFixed(2)} h combined`:Number.isFinite(credited)?credited.toFixed(2)+' h':'—';const tr=document.createElement('tr');tr.className=cls;tr.innerHTML=`<td>${a.date?escapeHtml(formatDateDisplay(a.date)):'—'}</td><td>${a.rowNumber}</td><td>${escapeHtml(a.roleLabel)}</td><td>${escapeHtml(a.sourceName)}</td><td><select onchange="updateAssignmentClinician(${i},this.value)">${clinicianOptions(a.clinicianId)}</select></td><td>${escapeHtml(a.start||'—')}</td><td>${escapeHtml(a.end||'—')}</td><td>${Number.isFinite(a.duration)?a.duration.toFixed(2)+' h':'—'}</td><td><input type="text" value="${escapeHtml(a.factorText)}" onchange="updateAssignmentFactor(${i},this.value,this)"></td><td id="credit-${i}">${creditText}</td><td><span class="pill ${status==='OK'?'ok':status==='Overlap'?'info':status==='Check'?'err':'warn'}">${status}</span></td>`;body.appendChild(tr);});
 }
 function applyAssignmentClinician(index,clinicianId,rememberAlias=true){
   const a=reviewAssignments[index]; if(!a)return;
@@ -737,7 +737,7 @@ function resolveBulkMatch(action){
   renderReviewSummary(); renderClinicianSelection(); renderReviewTable();
 }
 
-function updateAssignmentFactor(index,value,input){const a=reviewAssignments[index];a.factorText=value.trim();a.factor=parseFactor(value);const credited=Number.isFinite(a.duration)&&Number.isFinite(a.factor)?a.duration*a.factor:NaN;const cell=document.getElementById('credit-'+index);if(cell)cell.textContent=Number.isFinite(credited)?credited.toFixed(2)+' h':'—';if(!Number.isFinite(a.factor))input.style.borderColor='var(--danger)';else input.style.borderColor='';renderReviewSummary();}
+function updateAssignmentFactor(index,value,input){const a=reviewAssignments[index];a.factorText=value.trim();a.factor=parseFactor(value);if(!Number.isFinite(a.factor))input.style.borderColor='var(--danger)';else input.style.borderColor='';renderReview();}
 function applyRoleFactorsToAll(){const roleMap=new Map(profile.roles.map(r=>[r.id,r]));reviewAssignments.forEach(a=>{const r=roleMap.get(a.roleId);if(r){a.factorText=r.factorText;a.factor=parseFactor(r.factorText);a.category=r.category;a.triggersPostCall=!!r.triggersPostCall;a.roleLabel=r.label;}});renderReview();}
 
 // ============================================================
@@ -753,6 +753,70 @@ function updateSelectionCount(){const el=document.getElementById('selection-coun
 // ============================================================
 // TIMESHEET CALCULATION
 // ============================================================
+function decimalHourToHHMM(hour){
+  if(!Number.isFinite(hour))return '';
+  let minutes=Math.round((((hour%24)+24)%24)*60);
+  if(minutes>=1440)minutes-=1440;
+  return `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
+}
+function assignmentInterval(a){
+  const start=parseTimeValue(a.start), rawEnd=parseTimeValue(a.end);
+  if(!Number.isFinite(start)||!Number.isFinite(rawEnd)||!Number.isFinite(a.factor))return null;
+  let end=rawEnd;
+  if(end<start)end+=24;
+  // If an imported shift explicitly has a positive duration but identical clock times, treat it as that duration.
+  if(end===start&&Number.isFinite(a.duration)&&a.duration>0)end=start+a.duration;
+  if(end<=start)return null;
+  return {...a,intervalStart:start,intervalEnd:end};
+}
+function buildCreditedSegments(assignments){
+  const intervals=assignments.map(assignmentInterval).filter(Boolean);
+  if(!intervals.length)return [];
+  const boundaries=[...new Set(intervals.flatMap(i=>[i.intervalStart,i.intervalEnd]))].sort((a,b)=>a-b);
+  const raw=[];
+  for(let i=0;i<boundaries.length-1;i++){
+    const start=boundaries[i],end=boundaries[i+1];
+    if(end<=start)continue;
+    const active=intervals.filter(a=>a.intervalStart<end-1e-9&&a.intervalEnd>start+1e-9);
+    if(!active.length)continue;
+    const maxFactor=Math.max(...active.map(a=>a.factor));
+    const winners=active.filter(a=>Math.abs(a.factor-maxFactor)<1e-9);
+    // On-site wins a tie because the employee is physically working on site rather than merely on standby.
+    const category=winners.some(a=>a.category!=='offsite')?'onsite':'offsite';
+    const labels=[...new Set(active.map(a=>a.roleLabel).filter(Boolean))];
+    raw.push({
+      startHour:start,endHour:end,start:decimalHourToHHMM(start),end:decimalHourToHHMM(end),
+      duration:end-start,factor:maxFactor,category,
+      roleLabel:labels.join(' + ')||'Overtime',
+      triggersPostCall:active.some(a=>a.triggersPostCall),
+      sourceAssignments:active
+    });
+  }
+  // Merge adjacent pieces where the interpreted role/rate remains identical.
+  const merged=[];
+  for(const seg of raw){
+    const prev=merged[merged.length-1];
+    if(prev&&Math.abs(prev.endHour-seg.startHour)<1e-9&&prev.factor===seg.factor&&prev.category===seg.category&&prev.roleLabel===seg.roleLabel&&prev.triggersPostCall===seg.triggersPostCall){
+      prev.endHour=seg.endHour;prev.end=seg.end;prev.duration+=seg.duration;prev.sourceAssignments=[...new Set([...prev.sourceAssignments,...seg.sourceAssignments])];
+    } else merged.push({...seg,sourceAssignments:[...seg.sourceAssignments]});
+  }
+  return merged.map(seg=>({...seg,credit:seg.duration*seg.factor}));
+}
+function simultaneousAssignmentCount(assignments=reviewAssignments){
+  const byPersonDate=new Map();
+  assignments.filter(a=>a.clinicianId&&a.date&&Number.isFinite(a.duration)&&Number.isFinite(a.factor)).forEach(a=>{
+    const key=`${a.clinicianId}|${toDateKey(a.date)}`;
+    (byPersonDate.get(key)??byPersonDate.set(key,[]).get(key)).push(a);
+  });
+  let count=0;
+  byPersonDate.forEach(list=>{
+    for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+      const x=assignmentInterval(list[i]),y=assignmentInterval(list[j]);
+      if(x&&y&&x.intervalStart<y.intervalEnd-1e-9&&y.intervalStart<x.intervalEnd-1e-9)count++;
+    }
+  });
+  return count;
+}
 function relevantAssignmentWarnings(year,months){return reviewAssignments.filter(a=>{if(!a.date)return true;const relevant=a.date.getFullYear()===year&&months.includes(a.date.getMonth()+1);return relevant&&(!a.clinicianId||!Number.isFinite(a.duration)||!Number.isFinite(a.factor));});}
 function generateTimesheetData(clinician,year,month,data,hospitalName,config,signatures){
   const totalDays=daysInMonth(year,month),firstDayWeekday=weekday(year,month,1);
@@ -772,10 +836,10 @@ function generateTimesheetData(clinician,year,month,data,hospitalName,config,sig
     for(const lr of (leaveMap[clinician.id]||[])){if(!lr.startDate||!lr.endDate)continue;const sk=toDateKey(lr.startDate),ek=toDateKey(lr.endDate);if(dateStr>=sk&&dateStr<=ek){status=lr.type||'Leave';dailyBase=0;baseStart=baseEnd=baseMeal='';if(!isWknd&&!isPubHol)leaveTracker[status]=(leaveTracker[status]||0)+1;break;}}
     const yesterday=new Date(year,month-1,day-1),yAssignments=assignmentMap[toDateKey(yesterday)]||[];const postCallToday=yAssignments.some(a=>a.triggersPostCall&&Number.isFinite(parseTimeValue(a.end))&&parseTimeValue(a.end)<12);
     if(postCallToday&&status===''&&!isWknd&&!isPubHol){const pc=isFri?friPostCallTime:postCallTime;baseEnd=pc;baseMeal='';status='Post Call';const sh=parseTimeValue(isFri?friStart:normalStart),eh=parseTimeValue(pc);dailyBase=Number.isFinite(sh)&&Number.isFinite(eh)&&eh>sh?eh-sh:0;}
-    const todays=assignmentMap[dateStr]||[];let dailyOnsite=0,dailyOffsite=0;todays.forEach(a=>{const credit=a.duration*a.factor;if(a.category==='offsite')dailyOffsite+=credit;else dailyOnsite+=credit;});
+    const todays=assignmentMap[dateStr]||[],creditedSegments=buildCreditedSegments(todays);let dailyOnsite=0,dailyOffsite=0;creditedSegments.forEach(seg=>{if(seg.category==='offsite')dailyOffsite+=seg.credit;else dailyOnsite+=seg.credit;});
     grandBase+=dailyBase;grandOnsite+=dailyOnsite;grandOffsite+=dailyOffsite;weeklyTotals[weekIndex].base+=dailyBase;weeklyTotals[weekIndex].onsite+=dailyOnsite;weeklyTotals[weekIndex].offsite+=dailyOffsite;
-    if(isWknd||isPubHol){if(todays.length){todays.forEach((a,j)=>daysData.push({day:j===0?dayLabel:'',isWeekend:isWknd,isHighlighted:true,status:a.roleLabel,start:a.start,end:a.end,meal:'',base:j===0?toHHMMSS(dailyBase):'',onSite:a.category==='onsite'?toHHMMSS(a.duration*a.factor):'',offSite:a.category==='offsite'?toHHMMSS(a.duration*a.factor):''}));}else daysData.push({day:dayLabel,isWeekend:isWknd,isHighlighted:false,status,start:'',end:'',meal:'',base:toHHMMSS(dailyBase),onSite:'',offSite:''});}
-    else {daysData.push({day:dayLabel,isWeekend:false,isHighlighted:false,status,start:baseStart,end:baseEnd,meal:baseMeal,base:toHHMMSS(dailyBase),onSite:'',offSite:''});todays.forEach(a=>daysData.push({day:'',isWeekend:false,isHighlighted:true,status:a.roleLabel,start:a.start,end:a.end,meal:'',base:'',onSite:a.category==='onsite'?toHHMMSS(a.duration*a.factor):'',offSite:a.category==='offsite'?toHHMMSS(a.duration*a.factor):''}));}
+    if(isWknd||isPubHol){if(creditedSegments.length){creditedSegments.forEach((seg,j)=>daysData.push({day:j===0?dayLabel:'',isWeekend:isWknd,isHighlighted:true,status:seg.roleLabel,start:seg.start,end:seg.end,meal:'',base:j===0?toHHMMSS(dailyBase):'',onSite:seg.category==='onsite'?toHHMMSS(seg.credit):'',offSite:seg.category==='offsite'?toHHMMSS(seg.credit):''}));}else daysData.push({day:dayLabel,isWeekend:isWknd,isHighlighted:false,status,start:'',end:'',meal:'',base:toHHMMSS(dailyBase),onSite:'',offSite:''});}
+    else {daysData.push({day:dayLabel,isWeekend:false,isHighlighted:false,status,start:baseStart,end:baseEnd,meal:baseMeal,base:toHHMMSS(dailyBase),onSite:'',offSite:''});creditedSegments.forEach(seg=>daysData.push({day:'',isWeekend:false,isHighlighted:true,status:seg.roleLabel,start:seg.start,end:seg.end,meal:'',base:'',onSite:seg.category==='onsite'?toHHMMSS(seg.credit):'',offSite:seg.category==='offsite'?toHHMMSS(seg.credit):''}));}
   }
   const weeklyData=weeklyTotals.map((w,i)=>({label:`Week ${i+1}`,base:toHHMMSS(w.base),onsite:toHHMMSS(w.onsite),offsite:toHHMMSS(w.offsite),baseVal:w.base,onsiteVal:w.onsite,offsiteVal:w.offsite})).filter(w=>w.baseVal>0||w.onsiteVal>0||w.offsiteVal>0);
   const leaveString=Object.entries(leaveTracker).map(([k,v])=>`${k}: ${v} day${v!==1?'s':''}`).join(', ');
