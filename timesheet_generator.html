@@ -3,1430 +3,852 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monthly Timesheet Generator</title>
+<title>Configurable Monthly Timesheet Generator</title>
 
-<!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-
-<!-- Third-party Libraries -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Jost:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #f5f2eb;
-    --surface: #fdfbf7;
-    --ink: #1a1914;
-    --ink-muted: #6b6860;
-    --ink-faint: #a8a59e;
-    --accent: #2d5a3d;
-    --accent-light: #e8f0ea;
-    --accent-mid: #4a7c5e;
-    --warn: #8b4513;
-    --warn-light: #fdf0e8;
-    --border: rgba(26,25,20,0.12);
-    --border-strong: rgba(26,25,20,0.22);
-    --radius: 8px;
-    --radius-lg: 14px;
-    --font-head: 'Fraunces', Georgia, serif;
-    --font-body: 'DM Sans', system-ui, sans-serif;
-    --font-mono: 'DM Mono', monospace;
+    --bg:#f5f2eb; --surface:#fdfbf7; --ink:#1a1914; --ink-muted:#6b6860; --ink-faint:#a8a59e;
+    --accent:#2d5a3d; --accent-light:#e8f0ea; --accent-mid:#4a7c5e; --warn:#8b4513; --warn-light:#fdf0e8;
+    --danger:#8b2f2f; --danger-light:#f9eaea; --info:#315d7a; --info-light:#eaf2f7;
+    --border:rgba(26,25,20,.12); --border-strong:rgba(26,25,20,.22); --radius:8px; --radius-lg:14px;
+    --font-head:'Jost',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif; --font-mono:'DM Mono',monospace;
   }
-
-  body {
-    font-family: var(--font-body);
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-    font-size: 15px;
-    line-height: 1.6;
+  body { font-family:var(--font-body); background:var(--bg); color:var(--ink); min-height:100vh; font-size:15px; line-height:1.55; }
+  .shell { max-width:1180px; margin:0 auto; padding:0 24px 80px; }
+  header { padding:44px 0 30px; border-bottom:1px solid var(--border-strong); margin-bottom:30px; }
+  header h1 { font-family:var(--font-head); font-size:34px; font-weight:300; line-height:1.15; }
+  header p.sub { margin-top:9px; color:var(--ink-muted); font-size:14px; }
+  .privacy-note { margin-top:14px; padding:10px 13px; border-radius:var(--radius); background:var(--accent-light); color:var(--accent); font-size:12px; display:inline-block; }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:26px 30px; margin-bottom:18px; }
+  .section-label { font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:14px; display:flex; align-items:center; gap:10px; }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+  .section h2 { font-family:var(--font-head); font-size:19px; font-weight:600; margin-bottom:5px; }
+  .hint { font-size:13px; color:var(--ink-muted); margin-bottom:18px; }
+  .muted { color:var(--ink-muted); }
+  .small { font-size:12px; }
+  .hidden { display:none !important; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .field-row.three { grid-template-columns:1fr 1fr 1fr; }
+  .field-row.quad { grid-template-columns:repeat(4,1fr); }
+  label { display:block; font-size:12px; font-weight:500; color:var(--ink-muted); margin-bottom:6px; letter-spacing:.02em; }
+  input[type=text], input[type=number], input[type=time], input[type=url], select {
+    width:100%; padding:9px 11px; border:1px solid var(--border-strong); border-radius:var(--radius); background:var(--bg);
+    font-family:var(--font-body); font-size:13px; color:var(--ink); outline:none;
   }
+  input:focus, select:focus { border-color:var(--accent-mid); box-shadow:0 0 0 3px rgba(74,124,94,.12); }
+  input[type=checkbox] { accent-color:var(--accent); }
+  button { font-family:var(--font-body); }
+  .btn-row { display:flex; gap:9px; flex-wrap:wrap; align-items:center; }
+  .btn-secondary, .btn-ghost, .btn-danger { padding:9px 14px; border-radius:var(--radius); font-size:13px; font-weight:500; cursor:pointer; }
+  .btn-secondary { border:1px solid var(--accent); background:var(--accent-light); color:var(--accent); }
+  .btn-secondary:hover { background:var(--accent); color:white; }
+  .btn-ghost { border:1px solid var(--border-strong); background:var(--bg); color:var(--ink-muted); }
+  .btn-ghost:hover { border-color:var(--accent-mid); color:var(--accent); }
+  .btn-danger { border:1px solid var(--danger); background:var(--danger-light); color:var(--danger); }
+  .generate-btn { display:block; width:100%; padding:15px; border:0; border-radius:var(--radius); background:var(--accent); color:white; font-family:var(--font-head); font-size:17px; font-style:italic; cursor:pointer; margin-top:8px; }
+  .generate-btn:hover { background:var(--accent-mid); }
+  .generate-btn:disabled { background:var(--ink-faint); cursor:not-allowed; }
+  .upload-zone { border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:28px 20px; text-align:center; cursor:pointer; position:relative; }
+  .upload-zone:hover, .upload-zone.drag-over { background:var(--accent-light); border-color:var(--accent-mid); }
+  .upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .upload-icon { display:block; font-size:30px; margin-bottom:8px; }
+  .file-badge { display:inline-flex; align-items:center; gap:7px; background:var(--accent-light); color:var(--accent); border:1px solid rgba(45,90,61,.2); border-radius:999px; padding:5px 12px; font-size:12px; font-family:var(--font-mono); margin-top:10px; }
+  .mapping-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+  .card { border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); padding:14px 16px; }
+  .card h3 { font-size:13px; margin-bottom:10px; color:var(--accent); }
+  .map-fields { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .inline-check { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); }
+  .inline-check label { margin:0; color:var(--ink); font-weight:400; }
+  .month-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:6px; margin-top:7px; }
+  .month-btn { padding:7px 3px; border:1px solid var(--border-strong); border-radius:var(--radius); background:var(--bg); font-family:var(--font-mono); font-size:11px; color:var(--ink-muted); cursor:pointer; text-align:center; user-select:none; }
+  .month-btn.selected { background:var(--accent); color:white; border-color:var(--accent); }
+  .table-wrap { overflow:auto; border:1px solid var(--border); border-radius:var(--radius); background:white; }
+  .table-wrap.review { max-height:560px; }
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  th { position:sticky; top:0; z-index:2; background:#efede7; color:var(--ink-muted); font-weight:600; text-align:left; padding:8px; border-bottom:1px solid var(--border-strong); white-space:nowrap; }
+  td { padding:7px 8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  td input, td select { min-width:110px; padding:6px 7px !important; font-size:12px !important; }
+  tr.problem { background:var(--warn-light); }
+  tr.error { background:var(--danger-light); }
+  .pill { display:inline-block; padding:2px 7px; border-radius:999px; font-size:10px; font-family:var(--font-mono); white-space:nowrap; }
+  .pill.ok { color:var(--accent); background:var(--accent-light); }
+  .pill.warn { color:var(--warn); background:var(--warn-light); }
+  .pill.err { color:var(--danger); background:var(--danger-light); }
+  .pill.info { color:var(--info); background:var(--info-light); }
+  .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin:12px 0 16px; }
+  .summary-card { border:1px solid var(--border); border-radius:var(--radius); padding:11px 13px; background:var(--bg); }
+  .summary-card .value { font-family:var(--font-head); font-size:23px; line-height:1.1; }
+  .summary-card .label { color:var(--ink-muted); font-size:11px; margin-top:4px; }
+  .role-actions { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:10px; }
+  .selection-toolbar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+  .selection-toolbar input[type=text] { max-width:260px; }
+  .clinician-list { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; max-height:330px; overflow:auto; padding:8px 2px; }
+  .clinician-option { display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); }
+  .clinician-option span { font-size:12px; }
+  .log-box { background:#1a1914; border-radius:var(--radius); padding:18px 21px; font-family:var(--font-mono); font-size:11px; line-height:1.75; max-height:260px; overflow:auto; color:#a8c5a0; margin-top:14px; display:none; }
+  .log-box.visible { display:block; }
+  .log-line.ok { color:#7ec88a; } .log-line.err { color:#e27b7b; } .log-line.info { color:#7ab3d4; } .log-line.dim { color:#77736b; }
+  .progress-bar { height:4px; background:var(--border); border-radius:999px; overflow:hidden; margin-top:14px; display:none; }
+  .progress-bar.visible { display:block; } .progress-fill { height:100%; background:var(--accent); width:0%; transition:width .2s ease; }
+  .results-grid { display:grid; gap:8px; margin-top:12px; }
+  .result-card { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); }
+  .result-card .name { flex:1; font-size:13px; font-weight:500; }
+  .dl-btn { padding:6px 12px; border:1px solid var(--accent); border-radius:var(--radius); background:transparent; color:var(--accent); font-size:11px; cursor:pointer; }
+  .dl-all-btn { width:100%; margin-top:10px; padding:10px; border:1px solid var(--accent); border-radius:var(--radius); background:var(--accent-light); color:var(--accent); font-weight:500; cursor:pointer; }
+  .notice { border:1px solid var(--border); border-radius:var(--radius); padding:11px 13px; font-size:12px; margin:10px 0; }
+  .notice.warn { background:var(--warn-light); color:var(--warn); border-color:rgba(139,69,19,.22); }
+  .notice.info { background:var(--info-light); color:var(--info); border-color:rgba(49,93,122,.18); }
+  details { margin-top:10px; }
+  summary { cursor:pointer; color:var(--accent); font-size:13px; font-weight:500; }
+  @media (max-width:900px) { .month-grid{grid-template-columns:repeat(6,1fr)} .clinician-list{grid-template-columns:repeat(2,1fr)} .summary-grid{grid-template-columns:repeat(2,1fr)} }
+  /* ---- STEPWISE WIZARD ---- */
+  .wizard-progress { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:0 0 22px; position:sticky; top:0; z-index:20; background:var(--bg); padding:10px 0 12px; }
+  .wizard-step-btn { border:1px solid var(--border-strong); background:var(--surface); border-radius:var(--radius); padding:10px 8px; cursor:default; text-align:left; min-width:0; transition:.15s ease; }
+  .wizard-step-btn .num { display:inline-flex; width:23px; height:23px; align-items:center; justify-content:center; border-radius:999px; background:var(--bg); border:1px solid var(--border-strong); font-family:var(--font-mono); font-size:10px; margin-right:5px; }
+  .wizard-step-btn .txt { font-size:11px; color:var(--ink-muted); font-weight:500; }
+  .wizard-step-btn.active { border-color:var(--accent); background:var(--accent-light); }
+  .wizard-step-btn.active .num { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .wizard-step-btn.active .txt { color:var(--accent); }
+  .wizard-step-btn.done { cursor:pointer; }
+  .wizard-step-btn.done .num { background:var(--accent-light); border-color:var(--accent-mid); color:var(--accent); }
+  .wizard-panel { display:none; }
+  .wizard-panel.active { display:block; }
+  .wizard-panel .section:last-of-type { margin-bottom:0; }
+  .wizard-nav { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:18px; padding-top:18px; border-top:1px solid var(--border); }
+  .wizard-nav .right { margin-left:auto; display:flex; gap:8px; }
+  .wizard-context { font-size:12px; color:var(--ink-muted); }
+  .step-intro { margin-bottom:16px; }
+  .step-intro h2 { font-family:var(--font-head); font-size:24px; font-weight:600; margin-bottom:4px; }
+  .step-intro p { color:var(--ink-muted); font-size:13px; }
+  .subsection { border-top:1px solid var(--border); margin-top:20px; padding-top:20px; }
+  .subsection:first-child { border-top:0; margin-top:0; padding-top:0; }
+  .subsection h3 { font-family:var(--font-head); font-size:17px; margin-bottom:5px; }
+  @media (max-width:650px) { .field-row,.field-row.three,.field-row.quad,.mapping-grid,.map-fields{grid-template-columns:1fr} .month-grid{grid-template-columns:repeat(4,1fr)} .clinician-list{grid-template-columns:1fr} .shell{padding:0 14px 60px} .section{padding:20px 18px} header h1{font-size:27px} .wizard-progress{grid-template-columns:repeat(5,1fr);gap:4px}.wizard-step-btn{padding:7px 4px;text-align:center}.wizard-step-btn .num{margin:0}.wizard-step-btn .txt{display:none}.wizard-nav{flex-wrap:wrap} }
 
-  .shell {
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 0 24px 80px;
-  }
+  /* ---- BULK NAME MATCH MODAL ---- */
+  .modal-backdrop { position:fixed; inset:0; background:rgba(20,20,16,.38); display:none; align-items:center; justify-content:center; padding:20px; z-index:1000; }
+  .modal-backdrop.visible { display:flex; }
+  .modal-card { width:min(460px,100%); background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius-lg); box-shadow:0 18px 60px rgba(0,0,0,.18); padding:24px; }
+  .modal-card h3 { font-family:var(--font-head); font-size:21px; margin-bottom:8px; }
+  .modal-card p { font-size:13px; color:var(--ink-muted); line-height:1.55; }
+  .modal-match-summary { margin:16px 0; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; }
+  .modal-match-summary strong { color:var(--ink); }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; flex-wrap:wrap; }
 
-  header {
-    padding: 48px 0 36px;
-    border-bottom: 1px solid var(--border-strong);
-    margin-bottom: 40px;
-  }
-
-  header h1 {
-    font-family: var(--font-head);
-    font-size: 34px;
-    font-weight: 300;
-    color: var(--ink);
-    line-height: 1.15;
-  }
-
-  header p.sub {
-    margin-top: 10px;
-    color: var(--ink-muted);
-    font-size: 14px;
-    font-weight: 300;
-  }
-
-  .section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 28px 32px;
-    margin-bottom: 20px;
-  }
-
-  .section-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  .section h2 {
-    font-family: var(--font-head);
-    font-weight: 600;
-    font-size: 18px;
-    margin-bottom: 6px;
-  }
-
-  .section p.hint {
-    font-size: 13px;
-    color: var(--ink-muted);
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
-
-  /* ---- DATA SOURCE TABS ---- */
-  .tab-group {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .tab-btn {
-    padding: 8px 16px;
-    border: 1px solid var(--border-strong);
-    background: var(--bg);
-    border-radius: var(--radius);
-    font-size: 13px;
-    cursor: pointer;
-    font-weight: 500;
-    color: var(--ink-muted);
-    transition: all 0.15s;
-  }
-
-  .tab-btn.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-  }
-
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  /* ---- UPLOAD ZONE ---- */
-  .upload-zone {
-    border: 1.5px dashed var(--border-strong);
-    border-radius: var(--radius);
-    padding: 36px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    position: relative;
-  }
-
-  .upload-zone:hover, .upload-zone.drag-over {
-    background: var(--accent-light);
-    border-color: var(--accent-mid);
-  }
-
-  .upload-zone input[type=file] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    width: 100%;
-    height: 100%;
-  }
-
-  .upload-icon {
-    font-size: 32px;
-    margin-bottom: 10px;
-    display: block;
-  }
-
-  .upload-zone .upload-text {
-    font-size: 14px;
-    color: var(--ink-muted);
-  }
-
-  .upload-zone .upload-text strong {
-    color: var(--accent);
-    font-weight: 500;
-  }
-
-  .file-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--accent-light);
-    color: var(--accent);
-    border: 1px solid rgba(45,90,61,0.2);
-    border-radius: 999px;
-    padding: 5px 14px;
-    font-size: 13px;
-    font-family: var(--font-mono);
-    margin-top: 12px;
-  }
-
-  /* ---- FORM FIELDS ---- */
-  .field-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .field-row.quad { grid-template-columns: 1fr 1fr 1fr 1fr; }
-
-  label {
-    display: block;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ink-muted);
-    margin-bottom: 6px;
-    letter-spacing: 0.03em;
-  }
-
-  input[type=text], input[type=number], input[type=time], input[type=url] {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    background: var(--bg);
-    font-family: var(--font-body);
-    font-size: 14px;
-    color: var(--ink);
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-
-  input:focus {
-    border-color: var(--accent-mid);
-    box-shadow: 0 0 0 3px rgba(74,124,94,0.15);
-  }
-
-  .btn-secondary {
-    padding: 10px 18px;
-    border: 1px solid var(--accent);
-    background: var(--accent-light);
-    color: var(--accent);
-    border-radius: var(--radius);
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .btn-secondary:hover { background: var(--accent); color: #fff; }
-
-  /* ---- MONTH PICKER ---- */
-  .month-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 8px;
-    margin-top: 8px;
-  }
-
-  .month-btn {
-    padding: 8px 4px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    background: var(--bg);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    cursor: pointer;
-    text-align: center;
-    color: var(--ink-muted);
-    transition: all 0.12s;
-    user-select: none;
-  }
-
-  .month-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-mid); }
-  .month-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  /* ---- GENERATE BUTTON ---- */
-  .generate-btn {
-    display: block;
-    width: 100%;
-    padding: 16px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
-    font-family: var(--font-head);
-    font-size: 17px;
-    font-weight: 300;
-    font-style: italic;
-    cursor: pointer;
-    transition: background 0.15s, transform 0.1s;
-    margin-top: 8px;
-  }
-
-  .generate-btn:hover { background: var(--accent-mid); }
-  .generate-btn:active { transform: scale(0.99); }
-  .generate-btn:disabled { background: var(--ink-faint); cursor: not-allowed; }
-
-  /* ---- LOG / STATUS ---- */
-  .log-box {
-    background: #1a1914;
-    border-radius: var(--radius);
-    padding: 20px 24px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1.8;
-    max-height: 260px;
-    overflow-y: auto;
-    color: #a8c5a0;
-    margin-top: 16px;
-    display: none;
-  }
-
-  .log-box.visible { display: block; }
-
-  .log-line { margin: 0; }
-  .log-line.ok { color: #7ec88a; }
-  .log-line.err { color: #e27b7b; }
-  .log-line.info { color: #7ab3d4; }
-  .log-line.dim { color: #5a5850; }
-
-  /* ---- RESULTS ---- */
-  .results-grid { display: grid; gap: 10px; margin-top: 16px; }
-
-  .result-card {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 18px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    transition: border-color 0.15s;
-  }
-
-  .result-card:hover { border-color: var(--border-strong); }
-  .result-card .name { flex: 1; font-size: 14px; font-weight: 500; }
-
-  .dl-btn {
-    padding: 7px 16px;
-    border: 1px solid var(--accent);
-    border-radius: var(--radius);
-    background: transparent;
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.12s, color 0.12s;
-  }
-
-  .dl-btn:hover { background: var(--accent); color: #fff; }
-
-  .dl-all-btn {
-    margin-top: 12px;
-    padding: 11px 20px;
-    border: 1.5px solid var(--accent);
-    border-radius: var(--radius);
-    background: var(--accent-light);
-    color: var(--accent);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.12s;
-  }
-
-  .dl-all-btn:hover { background: var(--accent); color: #fff; }
-
-  /* ---- PROGRESS BAR ---- */
-  .progress-bar {
-    height: 4px;
-    background: var(--border);
-    border-radius: 999px;
-    overflow: hidden;
-    margin-top: 16px;
-    display: none;
-  }
-
-  .progress-bar.visible { display: block; }
-
-  .progress-fill {
-    height: 100%;
-    background: var(--accent);
-    border-radius: 999px;
-    transition: width 0.3s ease;
-    width: 0%;
-  }
-
-  /* ---- SHEET GUIDE ---- */
-  .sheet-guide {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 16px;
-  }
-
-  .sheet-card {
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    background: var(--bg);
-  }
-
-  .sheet-card .sheet-name {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--accent-mid);
-    font-weight: 500;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .sheet-card .sheet-name::before { content: '⬛'; font-size: 8px; color: var(--accent); }
-  .sheet-card ul { list-style: none; font-size: 12px; color: var(--ink-muted); line-height: 1.9; }
-  .sheet-card ul li::before { content: '· '; color: var(--ink-faint); }
-
-  @media (max-width: 560px) {
-    .field-row, .field-row.quad { grid-template-columns: 1fr; }
-    .month-grid { grid-template-columns: repeat(4, 1fr); }
-    .sheet-guide { grid-template-columns: 1fr; }
-    header h1 { font-size: 26px; }
-  }
 </style>
 </head>
 <body>
-
 <div class="shell">
-
   <header>
     <h1>Monthly Timesheet Generator</h1>
-    <p class="sub">Upload your roster workbook, generate print-ready PDFs, and export monthly reporting tools.</p>
+    <p class="sub">Map an existing roster workbook, review how it has been interpreted, and generate print-ready timesheets locally in your browser.</p>
+    <div class="privacy-note">🔒 Workbook data is processed in this browser and is not uploaded to a server.</div>
   </header>
 
-  <!-- STEP 1: EXCEL WORKBOOK SOURCE -->
-  <div class="section" id="step-upload">
-    <div class="section-label">Step 1 — Data Source</div>
-    <h2>Upload Roster Data</h2>
-    <p class="hint">Upload your roster workbook as an Excel file. It must contain four sheets: <strong>Persal Details, Leave Schedule, Call Roster, Public Holidays</strong>.</p>
+  <nav class="wizard-progress" aria-label="Timesheet setup steps">
+    <button class="wizard-step-btn active" id="wizard-indicator-1" onclick="wizardIndicatorClick(1)"><span class="num">1</span><span class="txt">Workbook & facility</span></button>
+    <button class="wizard-step-btn" id="wizard-indicator-2" onclick="wizardIndicatorClick(2)"><span class="num">2</span><span class="txt">Map data</span></button>
+    <button class="wizard-step-btn" id="wizard-indicator-3" onclick="wizardIndicatorClick(3)"><span class="num">3</span><span class="txt">Hours & period</span></button>
+    <button class="wizard-step-btn" id="wizard-indicator-4" onclick="wizardIndicatorClick(4)"><span class="num">4</span><span class="txt">Check interpretation</span></button>
+    <button class="wizard-step-btn" id="wizard-indicator-5" onclick="wizardIndicatorClick(5)"><span class="num">5</span><span class="txt">Select & generate</span></button>
+  </nav>
 
-    <div class="tab-group">
-      <button class="tab-btn active" onclick="switchTab('excel-tab', this)">Excel File Upload</button>
-      <button class="tab-btn" onclick="switchTab('gsheets-tab', this)">From Google Sheets</button>
+  <!-- STEP 1 -->
+  <div class="wizard-panel active" id="wizard-step-1">
+    <div class="step-intro"><h2>1. Workbook & facility</h2><p>Choose or create a facility profile, then upload the roster workbook you want to process.</p></div>
+    <div class="section" id="step-profile">
+      <div class="section-label">Facility settings</div>
+      <h2>Facility & reusable settings</h2>
+      <p class="hint">A saved profile remembers this facility's mappings, overtime rules, aliases and working-hour defaults.</p>
+      <div class="field-row three">
+        <div><label>Saved profile</label><select id="profile-select" onchange="loadSelectedProfile()"></select></div>
+        <div><label>Profile name</label><input type="text" id="profile-name" value="Madwaleni default"></div>
+        <div><label>Hospital / facility name</label><input type="text" id="hospital-input" value="Madwaleni District Hospital"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="saveProfileToBrowser()">Save profile in browser</button>
+        <button class="btn-ghost" onclick="exportProfile()">Export profile (.json)</button>
+        <button class="btn-ghost" onclick="document.getElementById('profile-import').click()">Import profile</button>
+        <input id="profile-import" type="file" accept=".json,application/json" class="hidden" onchange="importProfileFile(event)">
+        <button class="btn-danger" onclick="deleteSelectedProfile()">Delete saved profile</button>
+      </div>
     </div>
 
-    <!-- Excel Tab -->
-    <div id="excel-tab" class="tab-content active">
-      <div style="margin-bottom: 20px;">
-        <button class="btn-secondary" onclick="downloadTemplate()">↓ Download Blank Excel Template (.xlsx)</button>
-      </div>
-      
+    <div class="section" id="step-upload">
+      <div class="section-label">Roster workbook</div>
+      <h2>Upload roster workbook</h2>
+      <p class="hint">Use the standard template for automatic mapping, or upload the facility's existing Excel workbook.</p>
+      <div class="btn-row" style="margin-bottom:14px"><button class="btn-secondary" onclick="downloadTemplate()">↓ Download standard Excel template</button></div>
       <div class="upload-zone" id="drop-zone">
         <input type="file" id="file-input" accept=".xlsx,.xls">
         <span class="upload-icon">📂</span>
-        <div class="upload-text"><strong>Click to browse</strong> or drag and drop here</div>
-        <div class="upload-text" style="font-size:12px; margin-top:4px;">Accepts .xlsx files only</div>
+        <div><strong>Click to browse</strong> or drag and drop an Excel workbook here</div>
+        <div class="small muted" style="margin-top:4px">.xlsx and .xls</div>
         <div id="file-name-badge"></div>
       </div>
-    </div>
-
-    <!-- Google Sheets Export Guide Tab -->
-    <div id="gsheets-tab" class="tab-content">
-      <div class="sheet-card" style="background: var(--accent-light); border-color: rgba(45,90,61,0.2);">
-        <div class="sheet-name">Download your Google Sheet as an Excel file</div>
-        <ol style="margin: 8px 0 0 20px; font-size: 13px; color: var(--ink-muted); line-height: 1.8;">
-          <li>Open the roster workbook in Google Sheets.</li>
-          <li>Select <strong>File → Download → Microsoft Excel (.xlsx)</strong>.</li>
-          <li>Return to the <strong>Excel File Upload</strong> tab and upload the downloaded file.</li>
-        </ol>
-        <p style="font-size:12px; color:var(--ink-muted); margin-top:10px;">
-          No sharing or publishing changes are required. Ensure the downloaded workbook still contains the four required sheets listed below.
-        </p>
-      </div>
-    </div>
-
-    <!-- Data Spec Guide -->
-    <div class="sheet-guide">
-      <div class="sheet-card">
-        <div class="sheet-name">Persal Details</div>
-        <ul>
-          <li>Col A — Full name</li>
-          <li>Col B — Persal number</li>
-          <li>Col C — Job title / rank</li>
-          <li>Col D — Appointment date</li>
-          <li>Col E — Nature of Appointment</li>
-          <li>Col F — Overtime Group</li>
-          <li>Col G — Contract End Date</li>
-        </ul>
-      </div>
-      <div class="sheet-card">
-        <div class="sheet-name">Leave Schedule</div>
-        <ul>
-          <li>Col A — Name</li>
-          <li>Col B — Leave type</li>
-          <li>Col C — Start date</li>
-          <li>Col D — End date</li>
-        </ul>
-      </div>
-      <div class="sheet-card">
-        <div class="sheet-name">Call Roster</div>
-        <ul>
-          <li>Col A — Date</li>
-          <li>Col C — OT start time</li>
-          <li>Col D — OT end time</li>
-          <li>Col F/G — On-call names</li>
-          <li>Col H — Standby name [calculated 1:3] </li>
-	  <li> Col I - Senior cover [calculated 1:1] </li>
-        </ul>
-      </div>
-      <div class="sheet-card">
-        <div class="sheet-name">Public Holidays</div>
-        <ul>
-          <li>Col A — Holiday date</li>
-        </ul>
+      <div class="wizard-nav">
+        <span class="wizard-context" id="step1-status">Upload a workbook to continue.</span>
+        <div class="right"><button class="generate-btn" style="width:auto;margin:0;padding:11px 22px" onclick="wizardNextFromStep1()">Map data →</button></div>
       </div>
     </div>
   </div>
 
-  <!-- STEP 2: HOSPITAL & PERIOD -->
-  <div class="section" id="step-period">
-    <div class="section-label">Step 2 — Hospital & Period</div>
-    <h2>Select Hospital & Reporting Period</h2>
-    <div class="field-row">
-      <div>
-        <label for="hospital-input">Hospital Name</label>
-        <input type="text" id="hospital-input" value="Madwaleni District Hospital">
-      </div>
-      <div>
-        <label for="year-input">Year</label>
-        <input type="number" id="year-input" value="2026" min="2020" max="2035">
-      </div>
-    </div>
-
-    <label>Months</label>
-    <div class="month-grid">
-      <div class="month-btn" data-month="1">Jan</div>
-      <div class="month-btn" data-month="2">Feb</div>
-      <div class="month-btn" data-month="3">Mar</div>
-      <div class="month-btn" data-month="4">Apr</div>
-      <div class="month-btn" data-month="5">May</div>
-      <div class="month-btn" data-month="6">Jun</div>
-      <div class="month-btn" data-month="7">Jul</div>
-      <div class="month-btn" data-month="8">Aug</div>
-      <div class="month-btn" data-month="9">Sep</div>
-      <div class="month-btn" data-month="10">Oct</div>
-      <div class="month-btn" data-month="11">Nov</div>
-      <div class="month-btn" data-month="12">Dec</div>
+  <!-- STEP 2 -->
+  <div class="wizard-panel" id="wizard-step-2">
+    <div class="step-intro"><h2>2. Map data</h2><p>Confirm which sheets and columns contain staff, leave, roster and public-holiday data, then review the overtime-role rules.</p></div>
+    <div class="section" id="step-mapping">
+      <div class="section-label">Workbook mapping</div>
+      <h2>Tell the generator where the data is</h2>
+      <p class="hint">Mappings are suggested automatically from sheet and column names. Correct anything that differs at this facility.</p>
+      <div id="sheet-mapping-grid" class="mapping-grid"></div>
+      <details open>
+        <summary>Roster role / overtime mapping</summary>
+        <p class="hint" style="margin-top:8px">Each roster column can be on-site or off-site, have its own factor (for example 1:1, 1:2 or 1:3), and optionally trigger post-call hours.</p>
+        <div class="table-wrap"><table><thead><tr><th>Roster column</th><th>Timesheet label</th><th>Category</th><th>Factor</th><th>Post-call?</th><th></th></tr></thead><tbody id="roles-body"></tbody></table></div>
+        <div class="role-actions"><button class="btn-secondary" onclick="addRoleMapping()">+ Add roster role</button><span class="small muted">Factor accepts ratios such as 1:3 or decimals such as 0.5.</span></div>
+      </details>
+      <div class="wizard-nav"><button class="btn-ghost" onclick="goToWizardStep(1)">← Back</button><div class="right"><button class="btn-ghost" onclick="saveProfileToBrowser()">Save mapping to profile</button><button class="generate-btn" style="width:auto;margin:0;padding:11px 22px" onclick="wizardNextFromStep2()">Working hours & period →</button></div></div>
     </div>
   </div>
 
-  <!-- STEP 3: WORKING HOURS CONFIGURATION -->
-  <div class="section" id="step-hours">
-    <div class="section-label">Step 3 — Base Working Hours</div>
-    <h2>Set Standard Hours</h2>
-    <div class="field-row quad">
-      <div>
-        <label for="base-start">Start Time</label>
-        <input type="time" id="base-start" value="07:30">
+  <!-- STEP 3 -->
+  <div class="wizard-panel" id="wizard-step-3">
+    <div class="step-intro"><h2>3. Working hours & reporting period</h2><p>Set the facility's normal working-day rules and choose the month or months you want to produce.</p></div>
+    <div class="section" id="step-hours">
+      <div class="section-label">Base working hours</div>
+      <h2>Working hours</h2>
+      <div class="field-row quad">
+        <div><label>Normal start</label><input type="time" id="base-start" value="07:30"></div>
+        <div><label>Normal end</label><input type="time" id="base-end" value="16:30"></div>
+        <div><label>Meal break</label><input type="time" id="base-meal" value="00:30"></div>
+        <div><label>Post-call finish</label><input type="time" id="post-call-time" value="13:00"></div>
       </div>
-      <div>
-        <label for="base-end">End Time</label>
-        <input type="time" id="base-end" value="16:30">
+      <div class="inline-check" style="margin:4px 0 12px"><input type="checkbox" id="friday-diff-check" checked onchange="toggleFridayHours()"><label for="friday-diff-check">Friday hours are different</label></div>
+      <div class="field-row quad" id="friday-hours-row">
+        <div><label>Friday start</label><input type="time" id="fri-start" value="07:30"></div>
+        <div><label>Friday end</label><input type="time" id="fri-end" value="13:30"></div>
+        <div><label>Friday meal</label><input type="time" id="fri-meal" value="00:00"></div>
+        <div><label>Friday post-call finish</label><input type="time" id="fri-post-call-time" value="11:30"></div>
       </div>
-      <div>
-        <label for="base-meal">Meal Break</label>
-        <input type="time" id="base-meal" value="00:30">
+      <div class="subsection">
+        <h3>Reporting period</h3>
+        <div class="field-row" style="margin-top:10px">
+          <div><label>Year</label><input type="number" id="year-input" min="2020" max="2040"></div>
+          <div><label>Months to generate</label><div class="month-grid" id="month-grid"></div></div>
+        </div>
       </div>
-      <div>
-        <label for="post-call-time">Post-call Time</label>
-        <input type="time" id="post-call-time" value="13:00">
-      </div>
-    </div>
-
-    <div style="margin-top: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-      <input type="checkbox" id="friday-diff-check" onchange="toggleFridayHours()" checked>
-      <label for="friday-diff-check" style="margin: 0; font-size: 14px; color: var(--ink); font-weight: normal;">Friday hours are different</label>
-    </div>
-
-    <div class="field-row quad" id="friday-hours-row">
-      <div>
-        <label for="fri-start">Friday Start Time</label>
-        <input type="time" id="fri-start" value="07:30">
-      </div>
-      <div>
-        <label for="fri-end">Friday End Time</label>
-        <input type="time" id="fri-end" value="13:30">
-      </div>
-      <div>
-        <label for="fri-meal">Friday Meal Break</label>
-        <input type="time" id="fri-meal" value="00:00">
-      </div>
-      <div>
-        <label for="fri-post-call-time">Post-call Time</label>
-        <input type="time" id="fri-post-call-time" value="11:30">
-      </div>
+      <details>
+        <summary>Advanced output settings</summary>
+        <div class="field-row three" style="margin-top:12px">
+          <div><label>Employee signature label</label><input type="text" id="sig-employee" value="Employee"></div>
+          <div><label>Supervisor signature label</label><input type="text" id="sig-supervisor" value="Clinical Supervisor"></div>
+          <div><label>Authorising signature label</label><input type="text" id="sig-authoriser" value="CEO / Superintendent"></div>
+        </div>
+        <div class="inline-check"><input type="checkbox" id="reporting-enabled" checked><label for="reporting-enabled">Enable COT monthly reporting spreadsheet export</label></div>
+      </details>
+      <div class="wizard-nav"><button class="btn-ghost" onclick="goToWizardStep(2)">← Back</button><div class="right"><button class="btn-ghost" onclick="saveProfileToBrowser()">Save hours to profile</button><button class="generate-btn" style="width:auto;margin:0;padding:11px 22px" onclick="wizardNextFromStep3()">Check interpretation →</button></div></div>
     </div>
   </div>
 
-  <!-- STEP 4: GENERATION -->
-  <div class="section">
-    <div class="section-label">Step 4 — Generate</div>
-    <h2>Create Timesheets</h2>
-
-    <button class="generate-btn" id="gen-btn" onclick="runGeneration()">
-      Generate PDF Timesheets →
-    </button>
-
-    <div class="progress-bar" id="progress-bar">
-      <div class="progress-fill" id="progress-fill"></div>
-    </div>
-
-    <div class="log-box" id="log-box"></div>
-
-    <div id="results-section" style="display:none; margin-top:24px;">
-      <div class="section-label">Generated PDF Timesheets</div>
-      <div class="results-grid" id="results-grid"></div>
-      <button class="dl-all-btn" id="dl-all-pdf-btn" onclick="downloadAllPDFs()">Download All PDFs</button>
+  <!-- STEP 4 -->
+  <div class="wizard-panel" id="wizard-step-4">
+    <div class="step-intro"><h2>4. Check interpretation</h2><p>Confirm that names, dates, start/end times and overtime factors have been interpreted correctly before generating anything.</p></div>
+    <div class="section" id="step-review">
+      <div class="section-label">Interpreted roster</div>
+      <h2>Review interpreted assignments</h2>
+      <p class="hint">Correct unmatched names or an exceptional factor here. Name corrections are remembered as aliases when the facility profile is saved.</p>
+      <div id="review-summary" class="summary-grid"></div>
+      <div id="review-notices"></div>
+      <div class="selection-toolbar">
+        <label class="inline-check"><input type="checkbox" id="problems-only" onchange="renderReviewTable()"> Problems only</label>
+        <button class="btn-ghost" onclick="applyRoleFactorsToAll()">Reset row factors from role rules</button>
+      </div>
+      <div class="table-wrap review"><table><thead><tr><th>Date</th><th>Roster row</th><th>Role</th><th>Source name</th><th>Matched employee</th><th>Start</th><th>End</th><th>Actual</th><th>Factor</th><th>Credited</th><th>Status</th></tr></thead><tbody id="review-body"></tbody></table></div>
+      <div class="wizard-nav"><button class="btn-ghost" onclick="goToWizardStep(3)">← Back</button><div class="right"><button class="generate-btn" style="width:auto;margin:0;padding:11px 22px" onclick="wizardNextFromStep4()">Select staff & generate →</button></div></div>
     </div>
   </div>
 
-  <!-- STEP 5: MONTHLY REPORTING TOOL EXPORT -->
-  <div class="section" id="step-reporting">
-    <div class="section-label">Step 5 — Reporting Tool</div>
-    <h2>Export Monthly Reporting Spreadsheets</h2>
-    <p class="hint">Generates standard COT Monitoring Tool spreadsheets formatted with each doctor's weekly normal and overtime hours. Execute Step 4 first.</p>
-
-    <button class="generate-btn" id="report-btn" onclick="runReportingExport()" style="background: var(--accent-mid);">
-      Export Reporting Tool Excel(s) →
-    </button>
-
-    <div id="report-results-section" style="display:none; margin-top:24px;">
-      <div class="section-label">Generated Reporting Spreadsheets</div>
-      <div class="results-grid" id="report-results-grid"></div>
+  <!-- STEP 5 -->
+  <div class="wizard-panel" id="wizard-step-5">
+    <div class="step-intro"><h2>5. Select & generate</h2><p>Choose whose timesheets to produce, generate the PDFs, and optionally export the monthly reporting tool.</p></div>
+    <div class="section" id="step-select">
+      <div class="section-label">Staff selection</div>
+      <h2>Select timesheets to produce</h2>
+      <p class="hint">Generate a single employee, a subgroup, or the full cohort without changing the workbook.</p>
+      <div class="selection-toolbar">
+        <input type="text" id="clinician-search" placeholder="Search staff…" oninput="filterClinicianList()">
+        <button class="btn-ghost" onclick="selectAllClinicians(true)">Select all</button>
+        <button class="btn-ghost" onclick="selectAllClinicians(false)">Select none</button>
+        <button class="btn-ghost" onclick="selectWorkedClinicians()">Select staff with roster entries</button>
+        <span id="selection-count" class="small muted"></span>
+      </div>
+      <div id="clinician-list" class="clinician-list"></div>
+      <div class="subsection" id="step-generate">
+        <h3>Generate timesheets</h3>
+        <p class="hint">Generation uses the reviewed assignments and only the selected employees/months.</p>
+        <div class="inline-check" style="margin-bottom:10px"><input type="checkbox" id="allow-warnings"><label for="allow-warnings">Allow generation even when relevant roster warnings remain</label></div>
+        <button class="generate-btn" id="gen-btn" onclick="runGeneration()">Generate PDF Timesheets →</button>
+        <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="log-box" id="log-box"></div>
+        <div id="results-section" class="hidden" style="margin-top:20px">
+          <div class="section-label">Generated PDF Timesheets</div>
+          <div class="results-grid" id="results-grid"></div>
+          <button class="dl-all-btn" id="dl-all-pdf-btn" onclick="downloadAllPDFs()">Download All PDFs</button>
+        </div>
+      </div>
+      <div class="subsection" id="step-reporting">
+        <h3>Optional reporting tool</h3>
+        <p class="hint">After generating timesheets, export monthly COT reporting spreadsheet(s) from the same reviewed data.</p>
+        <button class="btn-secondary" id="report-btn" onclick="runReportingExport()">Export Reporting Tool Excel(s) →</button>
+        <div id="report-results-section" class="hidden" style="margin-top:18px"><div class="results-grid" id="report-results-grid"></div></div>
+      </div>
+      <div class="wizard-nav"><button class="btn-ghost" onclick="goToWizardStep(4)">← Back to interpretation</button><span class="wizard-context">You can return to an earlier step without losing the uploaded workbook.</span></div>
     </div>
   </div>
+</div>
 
+
+<div class="modal-backdrop" id="bulk-match-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-match-title">
+  <div class="modal-card">
+    <h3 id="bulk-match-title">Match to all entries with this name?</h3>
+    <p id="bulk-match-message">This roster name appears more than once.</p>
+    <div class="modal-match-summary" id="bulk-match-summary"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" type="button" onclick="resolveBulkMatch('cancel')">Cancel</button>
+      <button class="btn-secondary" type="button" onclick="resolveBulkMatch('single')">This entry only</button>
+      <button class="btn-primary" type="button" onclick="resolveBulkMatch('all')">Match all entries</button>
+    </div>
+  </div>
 </div>
 
 <script>
 // ============================================================
-// CONSTANTS & GLOBALS
+// STATE & DEFAULT PROFILE
 // ============================================================
 let workbook = null;
-const selectedMonths = new Set();
+let workbookFileName = '';
+let profile = null;
+let parsedData = null;
+let reviewAssignments = [];
+let wizardCurrentStep = 1;
+let wizardMaxStep = 1;
 let generatedTimesheets = [];
-
+let selectedClinicianIds = new Set();
+let pendingBulkMatch = null;
+const selectedMonths = new Set();
+const PROFILE_STORAGE_KEY = 'timesheet-generator-profiles-v2';
 const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
 const SHORT_MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ============================================================
-// UI & TAB NAVIGATION
-// ============================================================
-function switchTab(tabId, btn) {
-  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-  btn.classList.add('active');
+function makeDefaultProfile() {
+  return {
+    version: 2,
+    profileName: 'Madwaleni default',
+    hospitalName: 'Madwaleni District Hospital',
+    sheetMap: { staff:'Persal Details', leave:'Leave Schedule', roster:'Call Roster', holidays:'Public Holidays' },
+    headerRows: { staff:1, leave:1, roster:1, holidays:1 },
+    columnMap: {
+      staff: { name:'Name', persal:'Persal Number', rank:'Role', apptDate:'Appointment Date', apptNature:'Nature of Appointment', overtimeGroup:'Overtime Group', contractEnd:'Contract End' },
+      leave: { name:'Name', type:'Leave Type', startDate:'Leave Start', endDate:'Leave End' },
+      roster: { date:'Date', start:'OT Start', end:'OT End' },
+      holidays: { date:'Date' }
+    },
+    roles: [
+      { id:'role_oncall1', sourceHeader:'On-Call Name 1', label:'1st On Call', category:'onsite', factorText:'1:1', triggersPostCall:true },
+      { id:'role_oncall2', sourceHeader:'On-Call Name 2', label:'1st On Call', category:'onsite', factorText:'1:1', triggersPostCall:true },
+      { id:'role_standby', sourceHeader:'Standby', label:'Standby', category:'offsite', factorText:'1:3', triggersPostCall:false },
+      { id:'role_senior', sourceHeader:'Senior', label:'Senior Cover', category:'onsite', factorText:'1:1', triggersPostCall:true }
+    ],
+    hours: { start:'07:30', end:'16:30', meal:'00:30', postCallTime:'13:00', friDiff:true, friStart:'07:30', friEnd:'13:30', friMeal:'00:00', friPostCallTime:'11:30' },
+    signatures: { employee:'Employee', supervisor:'Clinical Supervisor', authoriser:'CEO / Superintendent' },
+    reportingEnabled: true,
+    aliases: {}
+  };
 }
 
-document.querySelectorAll('.month-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const m = parseInt(btn.dataset.month, 10);
-    if (selectedMonths.has(m)) {
-      selectedMonths.delete(m);
-      btn.classList.remove('selected');
-    } else {
-      selectedMonths.add(m);
-      btn.classList.add('selected');
-    }
-  });
-});
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function normalizeHeader(v) { return String(v ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g,' '); }
+function normalizeName(v) { return String(v ?? '').trim().toLowerCase().replace(/\b(dr|doctor|prof|mr|mrs|ms)\b\.?/g,' ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
+function uniqueId(prefix='id') { return prefix + '_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
+
+// ============================================================
+// INITIAL UI
+// ============================================================
+function init() {
+  profile = makeDefaultProfile();
+  document.getElementById('year-input').value = new Date().getFullYear();
+  renderMonths();
+  refreshProfileSelect();
+  applyProfileToUI();
+  bindUploadHandlers();
+  renderWizardState();
+}
+
+function renderMonths() {
+  const grid = document.getElementById('month-grid');
+  grid.innerHTML = '';
+  for (let m=1; m<=12; m++) {
+    const el = document.createElement('div');
+    el.className = 'month-btn'; el.dataset.month = m; el.textContent = SHORT_MONTHS[m];
+    el.onclick = () => { selectedMonths.has(m) ? selectedMonths.delete(m) : selectedMonths.add(m); el.classList.toggle('selected', selectedMonths.has(m)); };
+    grid.appendChild(el);
+  }
+}
 
 function toggleFridayHours() {
-  const isChecked = document.getElementById('friday-diff-check').checked;
-  document.getElementById('friday-hours-row').style.display = isChecked ? 'grid' : 'none';
+  document.getElementById('friday-hours-row').style.display = document.getElementById('friday-diff-check').checked ? 'grid' : 'none';
 }
 
-function log(msg, type='dim') {
-  const box = document.getElementById('log-box');
-  const p = document.createElement('p');
-  p.className = `log-line ${type}`;
-  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  box.appendChild(p);
-  box.scrollTop = box.scrollHeight;
-}
 
-function showLog() { document.getElementById('log-box').classList.add('visible'); }
-function setProgress(pct) {
-  document.getElementById('progress-bar').classList.add('visible');
-  document.getElementById('progress-fill').style.width = pct + '%';
+// ============================================================
+// STEPWISE WIZARD NAVIGATION
+// ============================================================
+function renderWizardState() {
+  for (let i=1;i<=5;i++) {
+    const panel=document.getElementById(`wizard-step-${i}`);
+    const indicator=document.getElementById(`wizard-indicator-${i}`);
+    if(panel)panel.classList.toggle('active',i===wizardCurrentStep);
+    if(indicator){
+      indicator.classList.toggle('active',i===wizardCurrentStep);
+      indicator.classList.toggle('done',i<=wizardMaxStep && i!==wizardCurrentStep);
+      indicator.setAttribute('aria-current',i===wizardCurrentStep?'step':'false');
+    }
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function goToWizardStep(step) {
+  step=Math.max(1,Math.min(5,step));
+  if(step>wizardMaxStep)return;
+  wizardCurrentStep=step; renderWizardState();
+}
+function wizardIndicatorClick(step){ if(step<=wizardMaxStep)goToWizardStep(step); }
+function wizardUnlock(step){ wizardMaxStep=Math.max(wizardMaxStep,step); }
+function invalidateInterpretation(){ parsedData=null; reviewAssignments=[]; selectedClinicianIds.clear(); generatedTimesheets=[]; if(wizardMaxStep>3)wizardMaxStep=3; }
+function wizardNextFromStep1(){
+  syncProfileFromUI();
+  if(!workbook){alert('Upload a roster workbook before continuing.');return;}
+  wizardUnlock(2); wizardCurrentStep=2; renderMappingUI(); renderWizardState();
+}
+function wizardNextFromStep2(){
+  if(!workbook){goToWizardStep(1);return;}
+  syncMappingFromUI();
+  const errors=validateMapping();
+  if(errors.length){alert(errors.join('\n'));return;}
+  wizardUnlock(3); wizardCurrentStep=3; renderWizardState();
+}
+function wizardNextFromStep3(){
+  if(selectedMonths.size===0){alert('Select at least one reporting month before continuing.');return;}
+  syncProfileFromUI();
+  parsedData=null; reviewAssignments=[]; selectedClinicianIds.clear();
+  if(!parseAndReview())return;
+  wizardUnlock(4); wizardCurrentStep=4; renderWizardState();
+}
+function wizardNextFromStep4(){
+  if(!parsedData){alert('The roster has not been interpreted yet. Return to Step 3 and continue again.');return;}
+  renderClinicianSelection(); wizardUnlock(5); wizardCurrentStep=5; renderWizardState();
 }
 
 // ============================================================
-// FILE UPLOAD HANDLERS
+// PROFILE STORAGE / IMPORT / EXPORT
 // ============================================================
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
+function getSavedProfiles() {
+  try { return JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function setSavedProfiles(obj) { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(obj)); }
+function refreshProfileSelect(selectName='__default__') {
+  const sel = document.getElementById('profile-select');
+  const saved = getSavedProfiles();
+  sel.innerHTML = `<option value="__default__">Built-in: Madwaleni default</option>` + Object.keys(saved).sort().map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  if ([...sel.options].some(o => o.value === selectName)) sel.value = selectName;
+}
+function loadSelectedProfile() {
+  const name = document.getElementById('profile-select').value;
+  if (name === '__default__') profile = makeDefaultProfile();
+  else {
+    const saved = getSavedProfiles();
+    if (!saved[name]) return;
+    profile = mergeProfile(saved[name]);
+  }
+  parsedData = null; reviewAssignments = []; selectedClinicianIds.clear(); generatedTimesheets=[];
+  applyProfileToUI();
+  if (workbook) { repairMappingAgainstWorkbook(); renderMappingUI(); wizardMaxStep=2; } else wizardMaxStep=1;
+  wizardCurrentStep=1; renderWizardState();
+}
+function mergeProfile(p) {
+  const d = makeDefaultProfile();
+  const out = { ...d, ...clone(p) };
+  out.sheetMap = { ...d.sheetMap, ...(p.sheetMap||{}) };
+  out.headerRows = { ...d.headerRows, ...(p.headerRows||{}) };
+  out.columnMap = {
+    staff:{...d.columnMap.staff,...((p.columnMap||{}).staff||{})}, leave:{...d.columnMap.leave,...((p.columnMap||{}).leave||{})},
+    roster:{...d.columnMap.roster,...((p.columnMap||{}).roster||{})}, holidays:{...d.columnMap.holidays,...((p.columnMap||{}).holidays||{})}
+  };
+  out.hours = { ...d.hours, ...(p.hours||{}) }; out.signatures = { ...d.signatures, ...(p.signatures||{}) };
+  out.aliases = { ...(p.aliases||{}) }; out.roles = Array.isArray(p.roles) && p.roles.length ? clone(p.roles) : clone(d.roles);
+  return out;
+}
+function syncProfileFromUI() {
+  profile.profileName = document.getElementById('profile-name').value.trim() || 'Unnamed profile';
+  profile.hospitalName = document.getElementById('hospital-input').value.trim() || 'Hospital';
+  profile.hours = {
+    start:document.getElementById('base-start').value, end:document.getElementById('base-end').value, meal:document.getElementById('base-meal').value,
+    postCallTime:document.getElementById('post-call-time').value, friDiff:document.getElementById('friday-diff-check').checked,
+    friStart:document.getElementById('fri-start').value, friEnd:document.getElementById('fri-end').value, friMeal:document.getElementById('fri-meal').value,
+    friPostCallTime:document.getElementById('fri-post-call-time').value
+  };
+  profile.signatures = { employee:document.getElementById('sig-employee').value, supervisor:document.getElementById('sig-supervisor').value, authoriser:document.getElementById('sig-authoriser').value };
+  profile.reportingEnabled = document.getElementById('reporting-enabled').checked;
+  if (workbook) syncMappingFromUI();
+}
+function applyProfileToUI() {
+  document.getElementById('profile-name').value = profile.profileName || '';
+  document.getElementById('hospital-input').value = profile.hospitalName || '';
+  const h=profile.hours;
+  document.getElementById('base-start').value=h.start; document.getElementById('base-end').value=h.end; document.getElementById('base-meal').value=h.meal; document.getElementById('post-call-time').value=h.postCallTime;
+  document.getElementById('friday-diff-check').checked=!!h.friDiff; document.getElementById('fri-start').value=h.friStart; document.getElementById('fri-end').value=h.friEnd; document.getElementById('fri-meal').value=h.friMeal; document.getElementById('fri-post-call-time').value=h.friPostCallTime;
+  const s=profile.signatures; document.getElementById('sig-employee').value=s.employee; document.getElementById('sig-supervisor').value=s.supervisor; document.getElementById('sig-authoriser').value=s.authoriser;
+  document.getElementById('reporting-enabled').checked=profile.reportingEnabled !== false;
+  toggleFridayHours();
+}
+function saveProfileToBrowser() {
+  syncProfileFromUI(); const name=profile.profileName;
+  const saved=getSavedProfiles(); saved[name]=clone(profile); setSavedProfiles(saved); refreshProfileSelect(name); log(`Profile saved: ${name}`,'ok'); showLog();
+}
+function deleteSelectedProfile() {
+  const sel=document.getElementById('profile-select'); const name=sel.value; if(name==='__default__') return;
+  const saved=getSavedProfiles(); delete saved[name]; setSavedProfiles(saved); refreshProfileSelect('__default__'); profile=makeDefaultProfile(); applyProfileToUI(); if(workbook){repairMappingAgainstWorkbook();renderMappingUI();}
+}
+function exportProfile() {
+  syncProfileFromUI(); const blob=new Blob([JSON.stringify(profile,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(profile.profileName||'timesheet-profile').replace(/[^a-z0-9_-]+/gi,'_')+'.json'; a.click(); URL.revokeObjectURL(a.href);
+}
+function importProfileFile(event) {
+  const file=event.target.files[0]; if(!file)return; const r=new FileReader();
+  r.onload=()=>{ try { profile=mergeProfile(JSON.parse(r.result)); applyProfileToUI(); parsedData=null;reviewAssignments=[];selectedClinicianIds.clear();generatedTimesheets=[]; if(workbook){repairMappingAgainstWorkbook();renderMappingUI();wizardMaxStep=2;}else wizardMaxStep=1;wizardCurrentStep=1;renderWizardState(); log(`Imported profile: ${profile.profileName}`,'ok'); showLog(); } catch(e){ alert('Could not import profile: '+e.message); } };
+  r.readAsText(file); event.target.value='';
+}
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
-});
-
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) loadFile(e.target.files[0]);
-});
-
+// ============================================================
+// WORKBOOK UPLOAD / MAPPING
+// ============================================================
+function bindUploadHandlers() {
+  const dz=document.getElementById('drop-zone'), fi=document.getElementById('file-input');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over')}); dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+  fi.addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+}
 function loadFile(file) {
-  const reader = new FileReader();
-  reader.onload = evt => {
-    try {
-      workbook = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
-      document.getElementById('file-name-badge').innerHTML = `<div class="file-badge">✓ ${file.name}</div>`;
-      log(`Loaded: ${file.name} (${workbook.SheetNames.join(', ')})`, 'ok');
-      showLog();
-    } catch(e) {
-      log(`Error reading file: ${e.message}`, 'err');
-      showLog();
+  const reader=new FileReader(); reader.onload=evt=>{ try {
+    workbook=XLSX.read(evt.target.result,{type:'array',cellDates:true}); workbookFileName=file.name;
+    document.getElementById('file-name-badge').innerHTML=`<div class="file-badge">✓ ${escapeHtml(file.name)} · ${workbook.SheetNames.length} sheets</div>`;
+    repairMappingAgainstWorkbook(true); renderMappingUI();
+    parsedData=null; reviewAssignments=[]; selectedClinicianIds.clear(); generatedTimesheets=[];
+    wizardMaxStep=1; wizardCurrentStep=1; renderWizardState();
+    const st=document.getElementById('step1-status'); if(st)st.textContent=`Ready: ${file.name} · ${workbook.SheetNames.length} sheets`;
+    log(`Loaded ${file.name}: ${workbook.SheetNames.join(', ')}`,'ok'); showLog();
+  } catch(e){ log(`Error reading workbook: ${e.message}`,'err'); showLog(); } }; reader.readAsArrayBuffer(file);
+}
+function guessSheet(keywords) {
+  if(!workbook)return '';
+  const exactPreferred={staff:['persal details','staff details','staff','employee details','personnel'],leave:['leave schedule','leave roster','leave'],roster:['call roster','roster','overtime roster','duty roster'],holidays:['public holidays','holidays','holiday']};
+  const list=exactPreferred[keywords]||[]; for(const target of list){const found=workbook.SheetNames.find(s=>normalizeHeader(s)===target);if(found)return found;}
+  for(const target of list){const found=workbook.SheetNames.find(s=>normalizeHeader(s).includes(target));if(found)return found;} return '';
+}
+function repairMappingAgainstWorkbook(forceGuess=false) {
+  if(!workbook)return;
+  for(const type of ['staff','leave','roster','holidays']) {
+    const current=profile.sheetMap[type]; if(forceGuess || (current && !workbook.SheetNames.includes(current)) || (!current && (type==='staff'||type==='roster'))) {
+      const guessed=guessSheet(type); if(guessed) profile.sheetMap[type]=guessed; else if(type==='staff'||type==='roster') profile.sheetMap[type]=workbook.SheetNames[0]||'';
     }
+  }
+  autoDetectColumns();
+}
+function getSheetRows(sheetName) { return sheetName && workbook?.Sheets[sheetName] ? XLSX.utils.sheet_to_json(workbook.Sheets[sheetName],{header:1,raw:true,defval:''}) : []; }
+function getHeaders(type) {
+  const rows=getSheetRows(profile.sheetMap[type]); const idx=Math.max(0,(parseInt(profile.headerRows[type],10)||1)-1); return (rows[idx]||[]).map(v=>String(v??'').trim());
+}
+function findBestHeader(headers, synonyms) {
+  const norm=headers.map(h=>normalizeHeader(h));
+  for(const s of synonyms){const i=norm.indexOf(normalizeHeader(s));if(i>=0)return headers[i];}
+  for(const s of synonyms){const ns=normalizeHeader(s);const i=norm.findIndex(h=>h.includes(ns)||ns.includes(h));if(i>=0)return headers[i];} return '';
+}
+function autoDetectColumns() {
+  const syn={
+    staff:{name:['Name','Full Name','Employee Name','Doctor','Staff Name'],persal:['Persal Number','Persal','Personnel Number','Employee Number'],rank:['Role','Rank','Job Title','Designation'],apptDate:['Appointment Date','Date Appointed','Start Date'],apptNature:['Nature of Appointment','Appointment Type','Employment Type'],overtimeGroup:['Overtime Group','COT Group','Commuted Overtime Group'],contractEnd:['Contract End','Contract End Date','End Date']},
+    leave:{name:['Name','Employee Name','Staff Name'],type:['Leave Type','Type of Leave','Leave'],startDate:['Leave Start','Start Date','From'],endDate:['Leave End','End Date','To']},
+    roster:{date:['Date','Roster Date','Duty Date'],start:['OT Start','Start','Start Time','Overtime Start'],end:['OT End','End','End Time','Overtime End']},
+    holidays:{date:['Date','Holiday Date','Public Holiday Date']}
   };
-  reader.readAsArrayBuffer(file);
+  for(const type of Object.keys(syn)) { const headers=getHeaders(type); if(!headers.length)continue; for(const [field,opts] of Object.entries(syn[type])) { const cur=profile.columnMap[type][field]; if(!cur || !headers.includes(cur)) profile.columnMap[type][field]=findBestHeader(headers,opts); } }
+  const rosterHeaders=getHeaders('roster');
+  const roleSyn=[['On-Call Name 1','On Call 1','First On Call','1st On Call','Doctor 1'],['On-Call Name 2','On Call 2','Second On Call','Doctor 2'],['Standby','Stand By'],['Senior','Senior Cover','MO Cover']];
+  profile.roles.forEach((r,i)=>{ if(!r.sourceHeader || !rosterHeaders.includes(r.sourceHeader)) { const g=findBestHeader(rosterHeaders,roleSyn[i]||[r.label]); if(g)r.sourceHeader=g; } });
 }
-
-// ============================================================
-// DATE & TIME HELPERS
-// ============================================================
-function toHHMMSS(decimalHours) {
-  if (!decimalHours || isNaN(decimalHours) || decimalHours <= 0) return '';
-  let h = Math.floor(decimalHours);
-  let m = Math.round((decimalHours - h) * 60);
-  if (m === 60) { h++; m = 0; }
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
+function sheetOptions(selected, allowNone) {
+  return (allowNone?`<option value="">— Not used —</option>`:'') + workbook.SheetNames.map(s=>`<option value="${escapeHtml(s)}" ${s===selected?'selected':''}>${escapeHtml(s)}</option>`).join('');
 }
-
-function parseTimeValue(val) {
-  if (val == null || val === '') return 0.0;
-  if (val instanceof Date) return val.getHours() + val.getMinutes()/60 + val.getSeconds()/3600;
-  if (typeof val === 'number') {
-    const totalSeconds = Math.round(val * 86400);
-    return Math.floor(totalSeconds / 3600) + (Math.floor((totalSeconds % 3600) / 60) / 60);
-  }
-  if (typeof val === 'string') {
-    const parts = val.split(':');
-    if (parts.length >= 2) return parseInt(parts[0], 10) + parseInt(parts[1], 10)/60;
-  }
-  return 0.0;
+function headerOptions(type, selected, allowNone=true) {
+  return (allowNone?`<option value="">— Not mapped —</option>`:'') + getHeaders(type).map(h=>`<option value="${escapeHtml(h)}" ${h===selected?'selected':''}>${escapeHtml(h||'(blank)')}</option>`).join('');
 }
-
-function formatExcelTime(val) {
-  if (val == null || val === '') return '';
-  if (val instanceof Date) return `${String(val.getHours()).padStart(2,'0')}:${String(val.getMinutes()).padStart(2,'0')}`;
-  if (typeof val === 'number') {
-    const totalSeconds = Math.round(val * 86400);
-    const h = Math.floor(totalSeconds / 3600) % 24;
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-  }
-  return String(val);
-}
-
-function formatDateDisplay(val) {
-  if (!val) return '';
-  if (val instanceof Date) {
-    return `${String(val.getDate()).padStart(2,'0')}/${String(val.getMonth()+1).padStart(2,'0')}/${val.getFullYear()}`;
-  }
-  return String(val);
-}
-
-function toDateKey(d) {
-  if (!d) return null;
-  if (d instanceof Date) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  return null;
-}
-
-function parseDateCell(cell) {
-  if (!cell) return null;
-  if (cell instanceof Date) return cell;
-  if (typeof cell === 'number') {
-    const d = XLSX.SSF.parse_date_code(cell);
-    if (d) return new Date(d.y, d.m-1, d.d);
-  }
-  if (typeof cell === 'string') {
-    const cleanStr = cell.trim().substring(0, 10);
-    const parts = cleanStr.includes('-') ? cleanStr.split('-') : cleanStr.split('/');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10)-1, parseInt(parts[2], 10));
-      return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10)-1, parseInt(parts[0], 10));
-    }
-  }
-  return null;
-}
-
-function sheetToObjectsRaw(sheet) { return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true }); }
-function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); }
-function weekday(year, month, day) { const d = new Date(year, month-1, day).getDay(); return d === 0 ? 6 : d - 1; }
-
-// ============================================================
-// PARSE WORKBOOK DATA
-// ============================================================
-function parseWorkbook(wb) {
-  const persalRows  = wb.Sheets['Persal Details'] ? sheetToObjectsRaw(wb.Sheets['Persal Details']) : [];
-  const leaveRows   = wb.Sheets['Leave Schedule'] ? sheetToObjectsRaw(wb.Sheets['Leave Schedule']) : [];
-  const rosterRows  = wb.Sheets['Call Roster'] ? sheetToObjectsRaw(wb.Sheets['Call Roster']) : [];
-  const holidayRows = wb.Sheets['Public Holidays'] ? sheetToObjectsRaw(wb.Sheets['Public Holidays']) : [];
-
-  const clinicians = [];
-  for (let i = 1; i < persalRows.length; i++) {
-    const r = persalRows[i];
-    if (!r[0] || String(r[0]).trim() === '') continue;
-    clinicians.push({
-      name: String(r[0]).trim(),
-      persal: r[1] ? String(r[1]).trim() : '',
-      rank: r[2] ? String(r[2]).trim() : '',
-      apptDate: parseDateCell(r[3]),
-      apptNature: r[4] ? String(r[4]).trim() : '',
-      overtimeGroup: r[5] ? String(r[5]).trim() : '',
-      contractEnd: parseDateCell(r[6])
-    });
-  }
-
-  const holidays = new Set();
-  for (let i = 1; i < holidayRows.length; i++) {
-    const dateObj = parseDateCell(holidayRows[i][0]);
-    if (dateObj) holidays.add(toDateKey(dateObj));
-  }
-
-  const leaveRecords = [];
-  for (let i = 1; i < leaveRows.length; i++) {
-    const r = leaveRows[i];
-    if (!r[0]) continue;
-    leaveRecords.push({
-      name: String(r[0]).trim(),
-      type: String(r[1] || '').trim(),
-      startDate: parseDateCell(r[2]),
-      endDate: parseDateCell(r[3]),
-    });
-  }
-
-  const rosterEntries = [];
-  for (let i = 1; i < rosterRows.length; i++) {
-    const r = rosterRows[i];
-    if (!r[0]) continue;
-    rosterEntries.push({
-      date: parseDateCell(r[0]),
-      otStart: r[2], otEnd: r[3],
-      onCall: [r[5], r[6], r[8]].map(v => v ? String(v).trim() : null).filter(Boolean),
-      standby: r[7] ? String(r[7]).trim() : null,
-    });
-  }
-
-  return { clinicians, holidays, leaveRecords, rosterEntries };
-}
-
-// ============================================================
-// GENERATE TIMESHEET DATA (FIXED VARIABLE SCOPING)
-// ============================================================
-function generateTimesheetData(clinician, year, month, data, hospitalName, config) {
-  const { holidays, leaveRecords, rosterEntries } = data;
-  const totalDays = daysInMonth(year, month);
-  const firstDayWeekday = weekday(year, month, 1);
-
-  const normalStart = config.start || '07:30';
-  const normalEnd   = config.end || '16:30';
-  const normalMeal  = config.meal || '00:30';
-  const normalHrs   = Math.max(0, parseTimeValue(normalEnd) - parseTimeValue(normalStart) - parseTimeValue(normalMeal));
-
-  const friStart = config.friDiff ? (config.friStart || '07:30') : normalStart;
-  const friEnd   = config.friDiff ? (config.friEnd || '13:30') : normalEnd;
-  const friMeal  = config.friDiff ? (config.friMeal || '00:00') : normalMeal;
-  const fridayHrs = Math.max(0, parseTimeValue(friEnd) - parseTimeValue(friStart) - parseTimeValue(friMeal));
-
-  const postCallTime = config.postCallTime || '13:00';
-  const friPostCallTime = config.friDiff ? (config.friPostCallTime || '11:30') : postCallTime;
-
-  const daysData = [];
-  let grandBase = 0, grandOnsite = 0, grandOffsite = 0;
-  const weeklyTotals = Array.from({length:6}, () => ({base:0, onsite:0, offsite:0}));
-  const leaveTracker = { 'Annual': 0, 'Sick': 0, 'Family Responsibility': 0, 'Other': 0 };
-
-  const leaveMap = {};
-  leaveRecords.forEach(lr => {
-    if (!leaveMap[lr.name]) leaveMap[lr.name] = [];
-    leaveMap[lr.name].push(lr);
-  });
-
-  const rosterMap = {};
-  rosterEntries.forEach(re => {
-    if (!re.date) return;
-    const ds = toDateKey(re.date);
-    if (!rosterMap[ds]) rosterMap[ds] = [];
-    rosterMap[ds].push(re);
-  });
-
-  for (let day = 1; day <= totalDays; day++) {
-    const dateObj = new Date(year, month-1, day);
-    const dateStr = toDateKey(dateObj);
-    const dow = weekday(year, month, day); 
-    const isWknd = dow >= 5;
-    const isFri  = dow === 4;
-    const weekIndex = Math.floor((day - 1 + firstDayWeekday) / 7);
-
-    const dayLabel = dateObj.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', weekday:'short' }).replace(',', ' -');
-
-    let status = '', isPubHol = false;
-    let dailyBase = isFri ? fridayHrs : (isWknd ? 0 : normalHrs);
-    let baseStart = isWknd ? '' : (isFri ? friStart : normalStart);
-    let baseEnd   = isWknd ? '' : (isFri ? friEnd : normalEnd);
-    let baseMeal  = isWknd ? '' : (isFri ? friMeal : normalMeal);
-    
-    if (baseMeal === '00:00') baseMeal = '';
-
-    if (holidays.has(dateStr)) {
-      status = 'Public Holiday'; isPubHol = true; dailyBase = 0; baseStart = baseEnd = baseMeal = '';
-    }
-
-    const cliLeave = leaveMap[clinician.name] || [];
-    for (const lr of cliLeave) {
-      if (!lr.startDate || !lr.endDate) continue;
-      const startKey = toDateKey(lr.startDate);
-      const endKey   = toDateKey(lr.endDate);
-      if (dateStr >= startKey && dateStr <= endKey) {
-        status = lr.type; dailyBase = 0; baseStart = baseEnd = baseMeal = '';
-        if (!isWknd) {
-          const lk = leaveTracker.hasOwnProperty(lr.type) ? lr.type : 'Other';
-          leaveTracker[lk]++;
-        }
-        break;
-      }
-    }
-
-    const todayRoster = rosterMap[dateStr] || [];
-    let dailyOnsite = 0, dailyOffsite = 0, otStartStr = '', otEndStr = '';
-
-    for (const re of todayRoster) {
-      let dur = parseTimeValue(re.otEnd) - parseTimeValue(re.otStart);
-      if (dur < 0) dur += 24;
-      if (re.onCall.includes(clinician.name)) {
-        dailyOnsite += dur; otStartStr = formatExcelTime(re.otStart); otEndStr = formatExcelTime(re.otEnd);
-      } else if (re.standby === clinician.name) {
-        dailyOffsite += dur / 3; otStartStr = formatExcelTime(re.otStart); otEndStr = formatExcelTime(re.otEnd);
-      }
-    }
-
-    const yesterday = new Date(year, month-1, day-1);
-    const yesterdayRoster = rosterMap[toDateKey(yesterday)] || [];
-    let postCallToday = false;
-
-    for (const re of yesterdayRoster) {
-      if (re.onCall.includes(clinician.name) && parseTimeValue(re.otEnd) < 12) { postCallToday = true; break; }
-    }
-
-    if (postCallToday && status === '' && !isWknd && !isPubHol) {
-      const postCallEndVal = isFri ? friPostCallTime : postCallTime;
-      baseEnd = formatExcelTime(postCallEndVal); baseMeal = ''; status = 'Post Call';
-      const startH = parseTimeValue(isFri ? friStart : normalStart);
-      const endH = parseTimeValue(postCallEndVal);
-      dailyBase = endH > startH ? endH - startH : 0;
-    }
-
-    grandBase += dailyBase; grandOnsite += dailyOnsite; grandOffsite += dailyOffsite;
-    const wi = Math.min(weekIndex, 5);
-    weeklyTotals[wi].base += dailyBase; weeklyTotals[wi].onsite += dailyOnsite; weeklyTotals[wi].offsite += dailyOffsite;
-
-    const otActive = dailyOnsite > 0 || dailyOffsite > 0;
-
-    if (isWknd || isPubHol) {
-      daysData.push({
-        day: dayLabel, isWeekend: isWknd, isHighlighted: false, status: status || (otActive ? 'On-Call' : ''),
-        start: otActive ? otStartStr : '', end: otActive ? otEndStr : '', meal: '',
-        base: toHHMMSS(dailyBase), onSite: toHHMMSS(dailyOnsite), offSite: toHHMMSS(dailyOffsite),
-      });
-    } else {
-      daysData.push({
-        day: dayLabel, isWeekend: false, isHighlighted: false, status, start: baseStart, end: baseEnd, meal: baseMeal,
-        base: toHHMMSS(dailyBase), onSite: '', offSite: '',
-      });
-      if (otActive) {
-        daysData.push({
-          day: '', isWeekend: false, isHighlighted: true, status: 'On-Call', start: otStartStr, end: otEndStr, meal: '',
-          base: '', onSite: toHHMMSS(dailyOnsite), offSite: toHHMMSS(dailyOffsite),
-        });
-      }
-    }
-  }
-
-  const weeklyFormatted = weeklyTotals
-    .map((w, i) => ({ label: `Week ${i+1}`, base: toHHMMSS(w.base), onsite: toHHMMSS(w.onsite), offsite: toHHMMSS(w.offsite), baseVal: w.base, onsiteVal: w.onsite, offsiteVal: w.offsite }))
-    .filter(w => w.baseVal > 0 || w.onsiteVal > 0 || w.offsiteVal > 0);
-
-  const leaveString = Object.entries(leaveTracker).filter(([,v]) => v > 0).map(([k,v]) => `${k}: ${v} day${v!==1?'s':''}`).join(', ');
-
-  return {
-    clinicianName: clinician.name,
-    rank: clinician.rank || '',
-    clinicianId: clinician.persal || '',
-    apptDate: formatDateDisplay(clinician.apptDate),
-    apptNature: clinician.apptNature || '',
-    overtimeGroup: clinician.overtimeGroup || '3.2',
-    contractEnd: formatDateDisplay(clinician.contractEnd),
-    hospitalName, 
-    startDateStr: `01/${String(month).padStart(2,'0')}/${year}`,
-    endDateStr: `${daysInMonth(year, month)}/${String(month).padStart(2,'0')}/${year}`,
-    daysData, weeklyData: weeklyFormatted, leaveString,
-    totalLeaveDays: Object.values(leaveTracker).reduce((sum, v) => sum + v, 0),
-    grandBase: toHHMMSS(grandBase), grandOvertime: toHHMMSS(grandOnsite + grandOffsite), grandTotal: toHHMMSS(grandBase + grandOnsite + grandOffsite)
-  };
-}
-
-// ============================================================
-// PDF GENERATION (JSPDF)
-// ============================================================
-function buildPDF(data) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'pt', 'a4');
-  const margin = 40;
-  let cursorY = margin;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text(`${data.clinicianName} — Timesheet — ${data.hospitalName}`, margin, cursorY);
-  
-  cursorY += 16;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(`Rank: ${data.rank}  |  Persal #: ${data.clinicianId}  |  Appt Date: ${data.apptDate}  |  Period: ${data.startDateStr} to ${data.endDateStr}`, margin, cursorY);
-  
-  cursorY += 10;
-  doc.setLineWidth(1.5);
-  doc.line(margin, cursorY, 595.28 - margin, cursorY);
-  cursorY += 15;
-
-  doc.autoTable({
-    startY: cursorY,
-    head: [['Day', 'Status', 'Start Time', 'End Time', 'Meal Break', 'Base Hours', '1st On Call', 'Standby']],
-    body: data.daysData.map(d => [d.day, d.status, d.start, d.end, d.meal, d.base, d.onSite, d.offSite]),
-    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5 },
-    headStyles: { fillColor: [239, 239, 239], textColor: [34, 34, 34], fontStyle: 'bold', halign: 'center' },
-    bodyStyles: { halign: 'center' },
-    columnStyles: { 0: { halign: 'left', cellWidth: 75 } },
-    didParseCell: function(info) {
-      if (info.section === 'body') {
-        const rowData = data.daysData[info.row.index];
-        if (rowData.isHighlighted) info.cell.styles.fillColor = [255, 248, 220];
-        else if (rowData.isWeekend) info.cell.styles.fillColor = [242, 242, 242];
-      }
-    }
-  });
-
-  cursorY = doc.lastAutoTable.finalY + 20;
-
-  if (cursorY > 700) { doc.addPage(); cursorY = margin; }
-
-  const halfWidth = (595.28 - (margin * 2) - 15) / 2;
-
-  doc.autoTable({
-    startY: cursorY,
-    margin: { left: margin },
-    tableWidth: halfWidth,
-    head: [[{ content: 'Weekly Totals', colSpan: 4, styles: { halign: 'center', fillColor: [230, 230, 230] } }], ['Week', 'Base', '1st On Call', 'Standby']],
-    body: data.weeklyData.map(w => [w.label, w.base, w.onsite, w.offsite]),
-    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5, halign: 'center' },
-    headStyles: { textColor: [34, 34, 34], fontStyle: 'bold' }
-  });
-
-  const weeklyFinalY = doc.lastAutoTable.finalY;
-
-  doc.autoTable({
-    startY: cursorY,
-    margin: { left: margin + halfWidth + 15 },
-    tableWidth: halfWidth,
-    head: [[{ content: 'Monthly Totals', colSpan: 2, styles: { halign: 'center', fillColor: [230, 230, 230] } }]],
-    body: [
-      ['Total Base Hours', data.grandBase],
-      ['Total Overtime', data.grandOvertime],
-      [{ content: 'Grand Total Hours', styles: { fontStyle: 'bold' } }, { content: data.grandTotal, styles: { fontStyle: 'bold' } }]
-    ],
-    styles: { fontSize: 8, cellPadding: 3, lineColor: [189, 189, 189], lineWidth: 0.5 },
-    headStyles: { textColor: [34, 34, 34], fontStyle: 'bold' }
-  });
-
-  cursorY = Math.max(weeklyFinalY, doc.lastAutoTable.finalY) + 15;
-
-  if (data.leaveString) {
-    if (cursorY > 750) { doc.addPage(); cursorY = margin; }
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setFillColor(247, 247, 247);
-    doc.setDrawColor(208, 208, 208);
-    doc.rect(margin, cursorY, 595.28 - (margin * 2), 20, 'FD');
-    doc.text(`Leave Summary: ${data.leaveString}`, margin + 5, cursorY + 13);
-    cursorY += 35;
-  }
-
-  if (cursorY > 730) { doc.addPage(); cursorY = margin; }
-  cursorY += 40;
-
-  const colWidth = (595.28 - (margin * 2)) / 3;
-  doc.setLineWidth(0.5);
-  doc.setDrawColor(0, 0, 0);
-  doc.setFontSize(8);
-
-  const sig1X = margin;
-  const sig2X = margin + colWidth;
-  const sig3X = margin + (colWidth * 2);
-  const lineLen = colWidth - 20;
-
-  doc.line(sig1X, cursorY, sig1X + lineLen, cursorY);
-  doc.line(sig2X, cursorY, sig2X + lineLen, cursorY);
-  doc.line(sig3X, cursorY, sig3X + lineLen, cursorY);
-
-  cursorY += 12;
-  doc.text('Employee', sig1X + (lineLen/2), cursorY, { align: 'center' });
-  doc.text('Clinical Supervisor', sig2X + (lineLen/2), cursorY, { align: 'center' });
-  doc.text('CEO / Superintendent', sig3X + (lineLen/2), cursorY, { align: 'center' });
-
-  return doc;
-}
-
-// ============================================================
-// RUN GENERATION STEP
-// ============================================================
-async function runGeneration() {
-  if (!workbook) {
-    log('No data loaded. Upload an Excel workbook first.', 'err');
-    showLog();
-    return;
-  }
-  if (selectedMonths.size === 0) {
-    log('No months selected. Select at least one month.', 'err');
-    showLog();
-    return;
-  }
-
-  const year = parseInt(document.getElementById('year-input').value, 10);
-  const hospitalName = document.getElementById('hospital-input').value.trim() || 'Hospital';
-  
-  const config = {
-    start: document.getElementById('base-start').value,
-    end: document.getElementById('base-end').value,
-    meal: document.getElementById('base-meal').value,
-    postCallTime: document.getElementById('post-call-time').value,
-    friDiff: document.getElementById('friday-diff-check').checked,
-    friStart: document.getElementById('fri-start').value,
-    friEnd: document.getElementById('fri-end').value,
-    friMeal: document.getElementById('fri-meal').value,
-    friPostCallTime: document.getElementById('fri-post-call-time').value,
-  };
-
-  document.getElementById('gen-btn').disabled = true;
-  generatedTimesheets = [];
-  document.getElementById('results-section').style.display = 'none';
-  document.getElementById('results-grid').innerHTML = '';
-  showLog();
-
-  const sortedMonths = Array.from(selectedMonths).sort((a,b)=>a-b);
-  log(`Starting generation for ${year}, Months: ${sortedMonths.map(m=>SHORT_MONTHS[m]).join(', ')}`, 'info');
-  setProgress(5);
-
-  let data;
-  try {
-    data = parseWorkbook(workbook);
-    log(`Parsed ${data.clinicians.length} clinicians, ${data.rosterEntries.length} roster entries, ${data.holidays.size} holidays`, 'ok');
-  } catch(e) {
-    log(`Failed to parse workbook: ${e.message}`, 'err');
-    document.getElementById('gen-btn').disabled = false;
-    return;
-  }
-
-  const total = data.clinicians.length * sortedMonths.length;
-  let done = 0;
-
-  for (const month of sortedMonths) {
-    for (const clinician of data.clinicians) {
-      try {
-        const tsData = generateTimesheetData(clinician, year, month, data, hospitalName, config);
-        generatedTimesheets.push({
-          label: `${clinician.name} — ${MONTH_NAMES[month]} ${year}`,
-          filename: `${clinician.name} - ${String(month).padStart(2,'0')}-${year} Timesheet.pdf`,
-          data: tsData
-        });
-        done++;
-        setProgress(Math.round(5 + (done/total)*90));
-        log(`✓ ${clinician.name} — ${MONTH_NAMES[month]} processed`, 'ok');
-      } catch(e) {
-        log(`✗ ${clinician.name} — ${MONTH_NAMES[month]} failed: ${e.message}`, 'err');
-        done++;
-      }
-      await new Promise(r => setTimeout(r, 0));
-    }
-  }
-
-  setProgress(100);
-  log(`Generation complete — ${generatedTimesheets.length} document(s) ready`, 'info');
-  renderResults();
-  document.getElementById('gen-btn').disabled = false;
-}
-
-function renderResults() {
-  const grid = document.getElementById('results-grid');
-  grid.innerHTML = '';
-
-  generatedTimesheets.forEach((ts, i) => {
-    const card = document.createElement('div');
-    card.className = 'result-card';
-    card.innerHTML = `
-      <div class="name">${ts.label}</div>
-      <button class="dl-btn" onclick="downloadPDF(${i})">↓ Download PDF</button>
-    `;
+const MAP_FIELD_LABELS={
+  staff:[['name','Full name *'],['persal','Persal / employee no.'],['rank','Rank / job title'],['apptDate','Appointment date'],['apptNature','Appointment nature'],['overtimeGroup','Overtime group'],['contractEnd','Contract end']],
+  leave:[['name','Name'],['type','Leave type'],['startDate','Start date'],['endDate','End date']], roster:[['date','Date *'],['start','OT start *'],['end','OT end *']], holidays:[['date','Holiday date']]
+};
+function renderMappingUI() {
+  if(!workbook)return; const grid=document.getElementById('sheet-mapping-grid'); grid.innerHTML='';
+  const titles={staff:'Staff / Persal details',leave:'Leave records',roster:'Roster',holidays:'Public holidays'};
+  for(const type of ['staff','leave','roster','holidays']) {
+    const allowNone=type==='leave'||type==='holidays'; const card=document.createElement('div');card.className='card';
+    const fields=MAP_FIELD_LABELS[type].map(([f,l])=>`<div><label>${l}</label><select id="map-${type}-${f}" onchange="onMappingValueChange('${type}','${f}',this.value)">${headerOptions(type,profile.columnMap[type][f],true)}</select></div>`).join('');
+    card.innerHTML=`<h3>${titles[type]}</h3><div class="field-row"><div><label>Sheet</label><select id="sheet-${type}" onchange="onSheetChange('${type}',this.value)">${sheetOptions(profile.sheetMap[type],allowNone)}</select></div><div><label>Header row</label><input type="number" id="header-${type}" min="1" value="${profile.headerRows[type]||1}" onchange="onHeaderRowChange('${type}',this.value)"></div></div><div class="map-fields">${fields}</div>`;
     grid.appendChild(card);
-  });
-
-  document.getElementById('results-section').style.display = 'block';
+  }
+  renderRoleMappings();
 }
+function onSheetChange(type,value){ profile.sheetMap[type]=value; autoDetectColumns(); invalidateInterpretation(); renderMappingUI(); }
+function onHeaderRowChange(type,value){ profile.headerRows[type]=Math.max(1,parseInt(value,10)||1); autoDetectColumns(); invalidateInterpretation(); renderMappingUI(); }
+function onMappingValueChange(type,field,value){ profile.columnMap[type][field]=value; invalidateInterpretation(); }
+function syncMappingFromUI(){
+  for(const type of ['staff','leave','roster','holidays']) { const s=document.getElementById('sheet-'+type),h=document.getElementById('header-'+type); if(s)profile.sheetMap[type]=s.value;if(h)profile.headerRows[type]=Math.max(1,parseInt(h.value,10)||1); for(const [f] of MAP_FIELD_LABELS[type]){const el=document.getElementById(`map-${type}-${f}`);if(el)profile.columnMap[type][f]=el.value;} }
+}
+function renderRoleMappings() {
+  const body=document.getElementById('roles-body'); if(!body)return; body.innerHTML='';
+  profile.roles.forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td><select onchange="updateRole(${i},'sourceHeader',this.value)">${headerOptions('roster',r.sourceHeader,true)}</select></td><td><input type="text" value="${escapeHtml(r.label)}" onchange="updateRole(${i},'label',this.value)"></td><td><select onchange="updateRole(${i},'category',this.value)"><option value="onsite" ${r.category==='onsite'?'selected':''}>On-site OT</option><option value="offsite" ${r.category==='offsite'?'selected':''}>Off-site OT</option></select></td><td><input type="text" value="${escapeHtml(r.factorText||'1:1')}" onchange="updateRole(${i},'factorText',this.value)"></td><td style="text-align:center"><input type="checkbox" ${r.triggersPostCall?'checked':''} onchange="updateRole(${i},'triggersPostCall',this.checked)"></td><td><button class="btn-ghost" onclick="removeRoleMapping(${i})">Remove</button></td>`; body.appendChild(tr); });
+}
+function updateRole(i,key,value){ profile.roles[i][key]=value; invalidateInterpretation(); }
+function addRoleMapping(){ profile.roles.push({id:uniqueId('role'),sourceHeader:'',label:'Roster Role',category:'onsite',factorText:'1:1',triggersPostCall:false});invalidateInterpretation();renderRoleMappings(); }
+function removeRoleMapping(i){ profile.roles.splice(i,1);invalidateInterpretation();renderRoleMappings(); }
 
-function downloadPDF(index) {
-  const ts = generatedTimesheets[index];
+// ============================================================
+// DATE / TIME HELPERS
+// ============================================================
+function parseTimeValue(val) {
+  if(val==null||val==='')return NaN;
+  if(val instanceof Date)return val.getHours()+val.getMinutes()/60+val.getSeconds()/3600;
+  if(typeof val==='number') { const seconds=Math.round(val*86400); return Math.floor(seconds/3600)+Math.floor((seconds%3600)/60)/60+(seconds%60)/3600; }
+  const s=String(val).trim(); const m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/); if(m)return +m[1]+(+m[2])/60+(+(m[3]||0))/3600;
+  const n=Number(s); return Number.isFinite(n)?n:NaN;
+}
+function formatExcelTime(val) { const h=parseTimeValue(val); if(!Number.isFinite(h))return ''; const total=Math.round(h*60); return `${String(Math.floor(total/60)%24).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`; }
+function toHHMMSS(hours) { if(!Number.isFinite(hours)||hours<=0)return ''; let total=Math.round(hours*60); return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}:00`; }
+function parseDateCell(cell) {
+  if(!cell)return null; if(cell instanceof Date && !isNaN(cell))return new Date(cell.getFullYear(),cell.getMonth(),cell.getDate());
+  if(typeof cell==='number'){const d=XLSX.SSF.parse_date_code(cell);if(d)return new Date(d.y,d.m-1,d.d);}
+  const s=String(cell).trim(); const iso=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/); if(iso)return new Date(+iso[1],+iso[2]-1,+iso[3]);
+  const dmy=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/); if(dmy)return new Date(+dmy[3],+dmy[2]-1,+dmy[1]); return null;
+}
+function toDateKey(d){return d instanceof Date&&!isNaN(d)?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:null;}
+function formatDateDisplay(d){return d instanceof Date&&!isNaN(d)?`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`:'';}
+function shiftDuration(start,end){const s=parseTimeValue(start),e=parseTimeValue(end);if(!Number.isFinite(s)||!Number.isFinite(e))return NaN;let d=e-s;if(d<0)d+=24;return d;}
+function parseFactor(v){const s=String(v??'').trim();const ratio=s.match(/^([0-9]*\.?[0-9]+)\s*:\s*([0-9]*\.?[0-9]+)$/);if(ratio&&+ratio[2]!==0)return +ratio[1]/+ratio[2];const n=Number(s);return Number.isFinite(n)&&n>=0?n:NaN;}
+function daysInMonth(y,m){return new Date(y,m,0).getDate();}
+function weekday(y,m,d){const x=new Date(y,m-1,d).getDay();return x===0?6:x-1;}
+
+// ============================================================
+// NORMALISE & REVIEW
+// ============================================================
+function buildHeaderIndex(type){const headers=getHeaders(type),idx={};headers.forEach((h,i)=>{if(h!==''&&!Object.prototype.hasOwnProperty.call(idx,h))idx[h]=i;});return idx;}
+function valueByHeader(row,index,header){return header && Object.prototype.hasOwnProperty.call(index,header)?row[index[header]]:'';}
+function splitRosterNames(value){ if(value==null||String(value).trim()==='')return []; return String(value).split(/[;\n]+/).map(s=>s.trim()).filter(Boolean); }
+function clinicianKeys(name){const n=normalizeName(name),t=n.split(' ').filter(Boolean);const out=new Set([n]);if(t.length>=2){const first=t[0],last=t[t.length-1];out.add(`${last} ${first[0]}`);out.add(`${first[0]} ${last}`);out.add(`${last}${first[0]}`);}return [...out];}
+function buildMatcher(clinicians){
+  const buckets=new Map(); clinicians.forEach(c=>clinicianKeys(c.name).forEach(k=>{if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(c);}));
+  return function(sourceName){const n=normalizeName(sourceName);const aliasName=profile.aliases[n];if(aliasName){const c=clinicians.find(x=>normalizeName(x.name)===normalizeName(aliasName));if(c)return {clinician:c,status:'alias'};}
+    const candidates=buckets.get(n)||[];if(candidates.length===1)return {clinician:candidates[0],status:'exact'};
+    const sourceKeys=clinicianKeys(sourceName);const found=new Map();sourceKeys.forEach(k=>(buckets.get(k)||[]).forEach(c=>found.set(c.id,c)));if(found.size===1)return {clinician:[...found.values()][0],status:'name-key'};
+    return {clinician:null,status:found.size>1?'ambiguous':'unmatched'}; };
+}
+function validateMapping(){
+  const errs=[]; if(!profile.sheetMap.staff)errs.push('A staff/Persal sheet is required.'); if(!profile.sheetMap.roster)errs.push('A roster sheet is required.');
+  if(!profile.columnMap.staff.name)errs.push('Map the staff name column.'); for(const f of ['date','start','end'])if(!profile.columnMap.roster[f])errs.push(`Map the roster ${f} column.`);
+  if(!profile.roles.some(r=>r.sourceHeader))errs.push('Map at least one roster role column.'); return errs;
+}
+function parseAndReview(){
+  if(!workbook){alert('Upload a workbook first.');return false;} syncProfileFromUI(); const mappingErrors=validateMapping(); if(mappingErrors.length){alert(mappingErrors.join('\n'));return false;}
   try {
-    const doc = buildPDF(ts.data);
-    doc.save(ts.filename);
-  } catch(e) {
-    log(`Error saving PDF: ${e.message}`, 'err');
+    const issues=[];
+    const staffRows=getSheetRows(profile.sheetMap.staff), staffStart=profile.headerRows.staff-1, staffIdx=buildHeaderIndex('staff'), clinicians=[];
+    for(let i=staffStart+1;i<staffRows.length;i++){const r=staffRows[i];const name=String(valueByHeader(r,staffIdx,profile.columnMap.staff.name)||'').trim();if(!name)continue;const persal=String(valueByHeader(r,staffIdx,profile.columnMap.staff.persal)||'').trim();clinicians.push({id:persal?`p:${persal}`:`n:${normalizeName(name)}:${i}`,name,persal,rank:String(valueByHeader(r,staffIdx,profile.columnMap.staff.rank)||'').trim(),apptDate:parseDateCell(valueByHeader(r,staffIdx,profile.columnMap.staff.apptDate)),apptNature:String(valueByHeader(r,staffIdx,profile.columnMap.staff.apptNature)||'').trim(),overtimeGroup:String(valueByHeader(r,staffIdx,profile.columnMap.staff.overtimeGroup)||'').trim(),contractEnd:parseDateCell(valueByHeader(r,staffIdx,profile.columnMap.staff.contractEnd)),sourceRow:i+1});}
+    const seenPersal=new Map();clinicians.forEach(c=>{if(c.persal){if(seenPersal.has(c.persal))issues.push({type:'error',message:`Duplicate Persal/employee number ${c.persal}: ${seenPersal.get(c.persal)} and ${c.name}`});else seenPersal.set(c.persal,c.name);}});
+    const matcher=buildMatcher(clinicians);
+    const leaveRecords=[]; if(profile.sheetMap.leave){const rows=getSheetRows(profile.sheetMap.leave),start=profile.headerRows.leave-1,idx=buildHeaderIndex('leave');for(let i=start+1;i<rows.length;i++){const r=rows[i],sourceName=String(valueByHeader(r,idx,profile.columnMap.leave.name)||'').trim();if(!sourceName)continue;const match=matcher(sourceName);const rec={sourceName,clinicianId:match.clinician?.id||null,type:String(valueByHeader(r,idx,profile.columnMap.leave.type)||'').trim(),startDate:parseDateCell(valueByHeader(r,idx,profile.columnMap.leave.startDate)),endDate:parseDateCell(valueByHeader(r,idx,profile.columnMap.leave.endDate)),sourceRow:i+1};leaveRecords.push(rec);if(!rec.clinicianId)issues.push({type:'warning',message:`Leave row ${i+1}: “${sourceName}” is not linked to a staff record.`});}}
+    const holidays=new Set(); if(profile.sheetMap.holidays){const rows=getSheetRows(profile.sheetMap.holidays),start=profile.headerRows.holidays-1,idx=buildHeaderIndex('holidays');for(let i=start+1;i<rows.length;i++){const d=parseDateCell(valueByHeader(rows[i],idx,profile.columnMap.holidays.date));if(d)holidays.add(toDateKey(d));}}
+    const rosterRows=getSheetRows(profile.sheetMap.roster), rosterStart=profile.headerRows.roster-1, rosterIdx=buildHeaderIndex('roster'), assignments=[];
+    for(let i=rosterStart+1;i<rosterRows.length;i++){
+      const r=rosterRows[i], rawDate=valueByHeader(r,rosterIdx,profile.columnMap.roster.date), date=parseDateCell(rawDate), startVal=valueByHeader(r,rosterIdx,profile.columnMap.roster.start), endVal=valueByHeader(r,rosterIdx,profile.columnMap.roster.end);
+      const hasRoleData=profile.roles.some(role=>splitRosterNames(valueByHeader(r,rosterIdx,role.sourceHeader)).length);
+      if(!date&&!hasRoleData)continue;
+      if(!date&&hasRoleData)issues.push({type:'error',message:`Roster row ${i+1}: assignments exist but the date could not be read.`});
+      for(const role of profile.roles){ if(!role.sourceHeader)continue; for(const sourceName of splitRosterNames(valueByHeader(r,rosterIdx,role.sourceHeader))){const match=matcher(sourceName),factor=parseFactor(role.factorText),dur=shiftDuration(startVal,endVal);const a={id:uniqueId('a'),rowNumber:i+1,date,startRaw:startVal,endRaw:endVal,start:formatExcelTime(startVal),end:formatExcelTime(endVal),sourceName,clinicianId:match.clinician?.id||null,matchStatus:match.status,roleId:role.id,roleLabel:role.label||role.sourceHeader,category:role.category==='offsite'?'offsite':'onsite',factorText:role.factorText||'1:1',factor:Number.isFinite(factor)?factor:NaN,triggersPostCall:!!role.triggersPostCall,duration:dur};assignments.push(a);if(!a.clinicianId)issues.push({type:'warning',message:`Roster row ${i+1}: “${sourceName}” (${a.roleLabel}) is not linked to staff.`});if(!date){}else if(!Number.isFinite(dur))issues.push({type:'error',message:`Roster row ${i+1}: invalid start/end time for ${sourceName}.`});if(!Number.isFinite(factor))issues.push({type:'error',message:`Roster role ${a.roleLabel}: invalid factor “${a.factorText}”.`});}}
+    }
+    parsedData={clinicians,leaveRecords,holidays,issues}; reviewAssignments=assignments; selectedClinicianIds=new Set(clinicians.map(c=>c.id));
+    renderReview(); renderClinicianSelection();
+    log(`Parsed ${clinicians.length} staff, ${assignments.length} roster assignments, ${leaveRecords.length} leave records and ${holidays.size} holidays.`,'ok'); showLog();
+    return true;
+  } catch(e){ log(`Failed to interpret workbook: ${e.message}`,'err');showLog();console.error(e); return false; }
+}
+function renderReview(){renderReviewSummary();renderReviewTable();}
+function renderReviewSummary(){
+  const unmatched=reviewAssignments.filter(a=>!a.clinicianId).length, badTimes=reviewAssignments.filter(a=>!a.date||!Number.isFinite(a.duration)).length, invalidFactors=reviewAssignments.filter(a=>!Number.isFinite(a.factor)).length;
+  const el=document.getElementById('review-summary'); el.innerHTML=`<div class="summary-card"><div class="value">${reviewAssignments.length}</div><div class="label">Roster assignments</div></div><div class="summary-card"><div class="value">${parsedData.clinicians.length}</div><div class="label">Staff records</div></div><div class="summary-card"><div class="value">${unmatched}</div><div class="label">Unmatched names</div></div><div class="summary-card"><div class="value">${badTimes+invalidFactors}</div><div class="label">Time / factor problems</div></div>`;
+  const notices=document.getElementById('review-notices');const msgs=[];if(unmatched)msgs.push(`${unmatched} roster name${unmatched===1?' is':'s are'} not linked to a staff record.`);if(badTimes)msgs.push(`${badTimes} assignment${badTimes===1?' has':'s have'} an unreadable date or time.`);if(invalidFactors)msgs.push(`${invalidFactors} assignment${invalidFactors===1?' has':'s have'} an invalid factor.`);notices.innerHTML=msgs.length?`<div class="notice warn">⚠ ${msgs.join(' ')}</div>`:`<div class="notice info">✓ No roster-linking, date/time or factor problems detected.</div>`;
+}
+function clinicianOptions(selectedId){return `<option value="">— Unmatched —</option>`+parsedData.clinicians.map(c=>`<option value="${escapeHtml(c.id)}" ${c.id===selectedId?'selected':''}>${escapeHtml(c.name)}${c.persal?' · '+escapeHtml(c.persal):''}</option>`).join('');}
+function renderReviewTable(){
+  const body=document.getElementById('review-body');body.innerHTML='';const problemsOnly=document.getElementById('problems-only')?.checked;
+  reviewAssignments.forEach((a,i)=>{const problem=!a.clinicianId||!a.date||!Number.isFinite(a.duration)||!Number.isFinite(a.factor);if(problemsOnly&&!problem)return;const credited=Number.isFinite(a.duration)&&Number.isFinite(a.factor)?a.duration*a.factor:NaN;const status=!a.clinicianId?'Unmatched':(!a.date||!Number.isFinite(a.duration)||!Number.isFinite(a.factor))?'Check':'OK';const cls=status==='OK'?'':status==='Check'?'error':'problem';const tr=document.createElement('tr');tr.className=cls;tr.innerHTML=`<td>${a.date?escapeHtml(formatDateDisplay(a.date)):'—'}</td><td>${a.rowNumber}</td><td>${escapeHtml(a.roleLabel)}</td><td>${escapeHtml(a.sourceName)}</td><td><select onchange="updateAssignmentClinician(${i},this.value)">${clinicianOptions(a.clinicianId)}</select></td><td>${escapeHtml(a.start||'—')}</td><td>${escapeHtml(a.end||'—')}</td><td>${Number.isFinite(a.duration)?a.duration.toFixed(2)+' h':'—'}</td><td><input type="text" value="${escapeHtml(a.factorText)}" onchange="updateAssignmentFactor(${i},this.value,this)"></td><td id="credit-${i}">${Number.isFinite(credited)?credited.toFixed(2)+' h':'—'}</td><td><span class="pill ${status==='OK'?'ok':status==='Check'?'err':'warn'}">${status}</span></td>`;body.appendChild(tr);});
+}
+function applyAssignmentClinician(index,clinicianId,rememberAlias=true){
+  const a=reviewAssignments[index]; if(!a)return;
+  a.clinicianId=clinicianId||null; a.matchStatus=clinicianId?'manual':'unmatched';
+  if(clinicianId&&rememberAlias){const c=parsedData.clinicians.find(x=>x.id===clinicianId);if(c)profile.aliases[normalizeName(a.sourceName)]=c.name;}
+}
+function updateAssignmentClinician(index,clinicianId){
+  const a=reviewAssignments[index]; if(!a)return;
+  if(!clinicianId){applyAssignmentClinician(index,'',false);renderReviewSummary();renderClinicianSelection();renderReviewTable();return;}
+  const sameNameIndexes=[];
+  const key=normalizeName(a.sourceName);
+  reviewAssignments.forEach((x,i)=>{if(normalizeName(x.sourceName)===key)sameNameIndexes.push(i);});
+  if(sameNameIndexes.length<=1){applyAssignmentClinician(index,clinicianId,true);renderReviewSummary();renderClinicianSelection();renderReviewTable();return;}
+  const clinician=parsedData.clinicians.find(x=>x.id===clinicianId);
+  pendingBulkMatch={index,clinicianId,indexes:sameNameIndexes,sourceName:a.sourceName};
+  document.getElementById('bulk-match-message').textContent=`“${a.sourceName}” appears in ${sameNameIndexes.length} roster entries.`;
+  document.getElementById('bulk-match-summary').innerHTML=`Match <strong>${escapeHtml(a.sourceName)}</strong> to <strong>${escapeHtml(clinician?.name||'selected staff member')}</strong>?`;
+  document.getElementById('bulk-match-modal').classList.add('visible');
+}
+function resolveBulkMatch(action){
+  const modal=document.getElementById('bulk-match-modal');
+  const pending=pendingBulkMatch; pendingBulkMatch=null; modal.classList.remove('visible');
+  if(!pending){renderReviewTable();return;}
+  if(action==='all'){
+    pending.indexes.forEach(i=>applyAssignmentClinician(i,pending.clinicianId,false));
+    const c=parsedData.clinicians.find(x=>x.id===pending.clinicianId);
+    if(c)profile.aliases[normalizeName(pending.sourceName)]=c.name;
+  } else if(action==='single'){
+    applyAssignmentClinician(pending.index,pending.clinicianId,false);
   }
+  renderReviewSummary(); renderClinicianSelection(); renderReviewTable();
 }
 
-async function downloadAllPDFs() {
-  const btn = document.getElementById('dl-all-pdf-btn');
-  btn.disabled = true;
-  btn.textContent = 'Downloading...';
-  for (let i = 0; i < generatedTimesheets.length; i++) {
-    downloadPDF(i);
-    await new Promise(r => setTimeout(r, 200)); 
+function updateAssignmentFactor(index,value,input){const a=reviewAssignments[index];a.factorText=value.trim();a.factor=parseFactor(value);const credited=Number.isFinite(a.duration)&&Number.isFinite(a.factor)?a.duration*a.factor:NaN;const cell=document.getElementById('credit-'+index);if(cell)cell.textContent=Number.isFinite(credited)?credited.toFixed(2)+' h':'—';if(!Number.isFinite(a.factor))input.style.borderColor='var(--danger)';else input.style.borderColor='';renderReviewSummary();}
+function applyRoleFactorsToAll(){const roleMap=new Map(profile.roles.map(r=>[r.id,r]));reviewAssignments.forEach(a=>{const r=roleMap.get(a.roleId);if(r){a.factorText=r.factorText;a.factor=parseFactor(r.factorText);a.category=r.category;a.triggersPostCall=!!r.triggersPostCall;a.roleLabel=r.label;}});renderReview();}
+
+// ============================================================
+// CLINICIAN SELECTION
+// ============================================================
+function renderClinicianSelection(){
+  if(!parsedData)return;const list=document.getElementById('clinician-list');list.innerHTML='';parsedData.clinicians.forEach(c=>{const div=document.createElement('label');div.className='clinician-option';div.dataset.search=normalizeName(`${c.name} ${c.persal} ${c.rank}`);div.innerHTML=`<input type="checkbox" ${selectedClinicianIds.has(c.id)?'checked':''} onchange="toggleClinician('${escapeHtml(c.id)}',this.checked)"><span><strong>${escapeHtml(c.name)}</strong>${c.rank?'<br><span class="muted">'+escapeHtml(c.rank)+'</span>':''}</span>`;list.appendChild(div);});updateSelectionCount();filterClinicianList();}
+function toggleClinician(id,checked){checked?selectedClinicianIds.add(id):selectedClinicianIds.delete(id);updateSelectionCount();}
+function selectAllClinicians(yes){if(!parsedData)return;selectedClinicianIds=yes?new Set(parsedData.clinicians.map(c=>c.id)):new Set();renderClinicianSelection();}
+function selectWorkedClinicians(){if(!parsedData)return;selectedClinicianIds=new Set(reviewAssignments.filter(a=>a.clinicianId).map(a=>a.clinicianId));renderClinicianSelection();}
+function updateSelectionCount(){const el=document.getElementById('selection-count');if(el)el.textContent=`${selectedClinicianIds.size} selected`;}function filterClinicianList(){const q=normalizeName(document.getElementById('clinician-search')?.value||'');document.querySelectorAll('.clinician-option').forEach(el=>el.style.display=!q||el.dataset.search.includes(q)?'flex':'none');}
+
+// ============================================================
+// TIMESHEET CALCULATION
+// ============================================================
+function relevantAssignmentWarnings(year,months){return reviewAssignments.filter(a=>{if(!a.date)return true;const relevant=a.date.getFullYear()===year&&months.includes(a.date.getMonth()+1);return relevant&&(!a.clinicianId||!Number.isFinite(a.duration)||!Number.isFinite(a.factor));});}
+function generateTimesheetData(clinician,year,month,data,hospitalName,config,signatures){
+  const totalDays=daysInMonth(year,month),firstDayWeekday=weekday(year,month,1);
+  const normalStart=config.start||'07:30',normalEnd=config.end||'16:30',normalMeal=config.meal||'00:30';
+  const normalHrs=Math.max(0,parseTimeValue(normalEnd)-parseTimeValue(normalStart)-parseTimeValue(normalMeal));
+  const friStart=config.friDiff?(config.friStart||normalStart):normalStart,friEnd=config.friDiff?(config.friEnd||normalEnd):normalEnd,friMeal=config.friDiff?(config.friMeal||normalMeal):normalMeal;
+  const fridayHrs=Math.max(0,parseTimeValue(friEnd)-parseTimeValue(friStart)-parseTimeValue(friMeal));
+  const postCallTime=config.postCallTime||'13:00',friPostCallTime=config.friDiff?(config.friPostCallTime||postCallTime):postCallTime;
+  const leaveMap={};data.leaveRecords.filter(l=>l.clinicianId).forEach(l=>{(leaveMap[l.clinicianId]??=[]).push(l);});
+  const assignmentMap={};data.assignments.filter(a=>a.clinicianId===clinician.id&&a.date).forEach(a=>{(assignmentMap[toDateKey(a.date)]??=[]).push(a);});
+  const daysData=[];let grandBase=0,grandOnsite=0,grandOffsite=0;const weeklyTotals=Array.from({length:6},()=>({base:0,onsite:0,offsite:0}));const leaveTracker={};
+  for(let day=1;day<=totalDays;day++){
+    const dateObj=new Date(year,month-1,day),dateStr=toDateKey(dateObj),dow=weekday(year,month,day),isWknd=dow>=5,isFri=dow===4,weekIndex=Math.min(Math.floor((day-1+firstDayWeekday)/7),5);
+    const dayLabel=dateObj.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',weekday:'short'}).replace(',',' -');
+    let status='',dailyBase=isFri?fridayHrs:(isWknd?0:normalHrs),baseStart=isWknd?'':(isFri?friStart:normalStart),baseEnd=isWknd?'':(isFri?friEnd:normalEnd),baseMeal=isWknd?'':(isFri?friMeal:normalMeal);if(baseMeal==='00:00')baseMeal='';
+    const isPubHol=data.holidays.has(dateStr);if(isPubHol){status='Public Holiday';dailyBase=0;baseStart=baseEnd=baseMeal='';}
+    for(const lr of (leaveMap[clinician.id]||[])){if(!lr.startDate||!lr.endDate)continue;const sk=toDateKey(lr.startDate),ek=toDateKey(lr.endDate);if(dateStr>=sk&&dateStr<=ek){status=lr.type||'Leave';dailyBase=0;baseStart=baseEnd=baseMeal='';if(!isWknd&&!isPubHol)leaveTracker[status]=(leaveTracker[status]||0)+1;break;}}
+    const yesterday=new Date(year,month-1,day-1),yAssignments=assignmentMap[toDateKey(yesterday)]||[];const postCallToday=yAssignments.some(a=>a.triggersPostCall&&Number.isFinite(parseTimeValue(a.end))&&parseTimeValue(a.end)<12);
+    if(postCallToday&&status===''&&!isWknd&&!isPubHol){const pc=isFri?friPostCallTime:postCallTime;baseEnd=pc;baseMeal='';status='Post Call';const sh=parseTimeValue(isFri?friStart:normalStart),eh=parseTimeValue(pc);dailyBase=Number.isFinite(sh)&&Number.isFinite(eh)&&eh>sh?eh-sh:0;}
+    const todays=assignmentMap[dateStr]||[];let dailyOnsite=0,dailyOffsite=0;todays.forEach(a=>{const credit=a.duration*a.factor;if(a.category==='offsite')dailyOffsite+=credit;else dailyOnsite+=credit;});
+    grandBase+=dailyBase;grandOnsite+=dailyOnsite;grandOffsite+=dailyOffsite;weeklyTotals[weekIndex].base+=dailyBase;weeklyTotals[weekIndex].onsite+=dailyOnsite;weeklyTotals[weekIndex].offsite+=dailyOffsite;
+    if(isWknd||isPubHol){if(todays.length){todays.forEach((a,j)=>daysData.push({day:j===0?dayLabel:'',isWeekend:isWknd,isHighlighted:true,status:a.roleLabel,start:a.start,end:a.end,meal:'',base:j===0?toHHMMSS(dailyBase):'',onSite:a.category==='onsite'?toHHMMSS(a.duration*a.factor):'',offSite:a.category==='offsite'?toHHMMSS(a.duration*a.factor):''}));}else daysData.push({day:dayLabel,isWeekend:isWknd,isHighlighted:false,status,start:'',end:'',meal:'',base:toHHMMSS(dailyBase),onSite:'',offSite:''});}
+    else {daysData.push({day:dayLabel,isWeekend:false,isHighlighted:false,status,start:baseStart,end:baseEnd,meal:baseMeal,base:toHHMMSS(dailyBase),onSite:'',offSite:''});todays.forEach(a=>daysData.push({day:'',isWeekend:false,isHighlighted:true,status:a.roleLabel,start:a.start,end:a.end,meal:'',base:'',onSite:a.category==='onsite'?toHHMMSS(a.duration*a.factor):'',offSite:a.category==='offsite'?toHHMMSS(a.duration*a.factor):''}));}
   }
-  btn.disabled = false;
-  btn.textContent = 'Download All PDFs';
+  const weeklyData=weeklyTotals.map((w,i)=>({label:`Week ${i+1}`,base:toHHMMSS(w.base),onsite:toHHMMSS(w.onsite),offsite:toHHMMSS(w.offsite),baseVal:w.base,onsiteVal:w.onsite,offsiteVal:w.offsite})).filter(w=>w.baseVal>0||w.onsiteVal>0||w.offsiteVal>0);
+  const leaveString=Object.entries(leaveTracker).map(([k,v])=>`${k}: ${v} day${v!==1?'s':''}`).join(', ');
+  return {clinicianName:clinician.name,rank:clinician.rank||'',clinicianId:clinician.persal||'',apptDate:formatDateDisplay(clinician.apptDate),apptNature:clinician.apptNature||'',overtimeGroup:clinician.overtimeGroup||'3.2',contractEnd:formatDateDisplay(clinician.contractEnd),hospitalName,startDateStr:`01/${String(month).padStart(2,'0')}/${year}`,endDateStr:`${daysInMonth(year,month)}/${String(month).padStart(2,'0')}/${year}`,daysData,weeklyData,leaveString,totalLeaveDays:Object.values(leaveTracker).reduce((s,v)=>s+v,0),grandBase:toHHMMSS(grandBase),grandOvertime:toHHMMSS(grandOnsite+grandOffsite),grandTotal:toHHMMSS(grandBase+grandOnsite+grandOffsite),signatures};
 }
 
 // ============================================================
-// STEP 5: MONTHLY REPORTING TOOL EXCEL EXPORT
+// PDF GENERATION
 // ============================================================
-function hhmmToDecimal(str) {
-  if (!str || str === '') return 0;
-  const parts = str.split(':');
-  if (parts.length < 2) return 0;
-  return parseInt(parts[0], 10) + parseInt(parts[1], 10) / 60 + parseInt(parts[2] || 0, 10) / 3600;
-}
-
-function decimalToExcelTime(hours) { return hours / 24; }
-
-function extractWeeklyHours(tsData) {
-  const weeks = [];
-  const byWeek = {};
-  (tsData.weeklyData || []).forEach(w => {
-    const idx = parseInt(w.label.replace('Week ', ''), 10);
-    byWeek[idx] = w;
-  });
-  for (let i = 1; i <= 6; i++) {
-    const w = byWeek[i];
-    if (w) {
-      const ot = hhmmToDecimal(w.onsite) + hhmmToDecimal(w.offsite);
-      weeks.push({ normalHrs: hhmmToDecimal(w.base), otHrs: ot });
-    } else {
-      weeks.push({ normalHrs: 0, otHrs: 0 });
-    }
-  }
-  return weeks;
-}
-
-function buildReportingExcel(monthTimesheets, monthName, year) {
-  const wb = XLSX.utils.book_new();
-  const wsName = monthName.substring(0, 31);
-  const COL_COUNT = 27;
-  const aoaRows = [];
-
-  const titleRow = new Array(COL_COUNT).fill('');
-  titleRow[0] = 'No.';
-  titleRow[1] = 'Surname & Initials';
-  titleRow[2] = 'Persal no.';
-  titleRow[3] = 'Job title';
-  titleRow[4] = 'Pay point';
-  titleRow[5] = 'Placement (home body)';
-  titleRow[6] = 'Nature of appointment';
-  titleRow[7] = 'Appointment date';
-  titleRow[8] = 'Contract end date';
-  titleRow[9] = 'Reporting month';
-  titleRow[10] = 'COT Group';
-  titleRow[11] = 'Week 1 Normal hrs';
-  titleRow[12] = 'Week 1 Overtime hrs';
-  titleRow[13] = 'Week 2 Normal hrs';
-  titleRow[14] = 'Week 2 Overtime hrs';
-  titleRow[15] = 'Week 3 Normal hrs';
-  titleRow[16] = 'Week 3 Overtime hrs';
-  titleRow[17] = 'Week 4 Normal hrs';
-  titleRow[18] = 'Week 4 Overtime hrs';
-  titleRow[19] = 'Week 5 Normal hrs';
-  titleRow[20] = 'Week 5 Overtime hrs';
-  titleRow[21] = 'Week 6 Normal hrs';
-  titleRow[22] = 'Week 6 Overtime hrs';
-  titleRow[23] = 'Total Normal Hours';
-  titleRow[24] = 'Total Overtime Hours';
-  titleRow[25] = 'Type of leave';
-  titleRow[26] = 'No of days taken';
-  aoaRows.push(titleRow);
-
-  monthTimesheets.forEach((ts, idx) => {
-    const d = ts.data;
-    const weeks = extractWeeklyHours(d);
-    const totalNormal = weeks.reduce((s, w) => s + w.normalHrs, 0);
-    const totalOT = weeks.reduce((s, w) => s + w.otHrs, 0);
-
-    const row = new Array(COL_COUNT).fill('');
-    row[0] = idx + 1;
-    row[1] = d.clinicianName;
-    row[2] = d.clinicianId;
-    row[3] = d.rank;
-    row[4] = d.hospitalName;
-    row[5] = d.hospitalName;
-    row[6] = d.apptNature;
-    row[7] = d.apptDate;
-    row[8] = d.contractEnd;
-    row[9] = `${monthName} ${year}`;
-    row[10] = d.overtimeGroup;
-
-    for (let w = 0; w < 6; w++) {
-      row[11 + w * 2]     = weeks[w].normalHrs > 0 ? decimalToExcelTime(weeks[w].normalHrs) : '';
-      row[11 + w * 2 + 1] = weeks[w].otHrs > 0     ? decimalToExcelTime(weeks[w].otHrs)     : '';
-    }
-
-    row[23] = totalNormal > 0 ? decimalToExcelTime(totalNormal) : '';
-    row[24] = totalOT > 0     ? decimalToExcelTime(totalOT)     : '';
-    row[25] = d.leaveString || '';
-    row[26] = d.totalLeaveDays || '';
-
-    aoaRows.push(row);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(aoaRows);
-  const timeColIndices = [11,12,13,14,15,16,17,18,19,20,21,22,23,24];
-  const timeFmt = '[h]:mm:ss';
-
-  for (let r = 1; r < aoaRows.length; r++) {
-    for (const ci of timeColIndices) {
-      const cellRef = XLSX.utils.encode_cell({ r, c: ci });
-      if (ws[cellRef] && ws[cellRef].v !== '') {
-        ws[cellRef].t = 'n';
-        ws[cellRef].z = timeFmt;
-      }
-    }
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, wsName);
-  const filename = `COT_Reporting_Tool_${monthName}_${year}.xlsx`;
-  XLSX.writeFile(wb, filename);
-  return filename;
-}
-
-function runReportingExport() {
-  if (generatedTimesheets.length === 0) {
-    log('No timesheet data available. Run Step 4 first.', 'err');
-    showLog();
-    return;
-  }
-
-  const year = parseInt(document.getElementById('year-input').value, 10);
-  const byMonth = {};
-
-  generatedTimesheets.forEach(ts => {
-    const parts = ts.label.split(' — ');
-    const monthYear = parts[parts.length - 1];
-    const [mn] = monthYear.split(' ');
-    if (!byMonth[mn]) byMonth[mn] = [];
-    byMonth[mn].push(ts);
-  });
-
-  const reportBtn = document.getElementById('report-btn');
-  reportBtn.disabled = true;
-
-  const grid = document.getElementById('report-results-grid');
-  grid.innerHTML = '';
-  document.getElementById('report-results-section').style.display = 'block';
-
-  Object.entries(byMonth).forEach(([monthName, tsList]) => {
-    try {
-      tsList.sort((a, b) => a.data.clinicianName.localeCompare(b.data.clinicianName));
-      const filename = buildReportingExcel(tsList, monthName, year);
-      log(`✓ Reporting tool exported: ${filename}`, 'ok');
-
-      const card = document.createElement('div');
-      card.className = 'result-card';
-      card.innerHTML = `<div class="name">📊 ${filename}</div>`;
-      grid.appendChild(card);
-    } catch(e) {
-      log(`✗ Failed to export ${monthName}: ${e.message}`, 'err');
-    }
-  });
-
-  showLog();
-  reportBtn.disabled = false;
+function buildPDF(data){
+  const {jsPDF}=window.jspdf,doc=new jsPDF('p','pt','a4'),margin=40;let y=margin;
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text(`${data.clinicianName} — Timesheet — ${data.hospitalName}`,margin,y);y+=16;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text(`Rank: ${data.rank}  |  Persal #: ${data.clinicianId}  |  Appt Date: ${data.apptDate}  |  Period: ${data.startDateStr} to ${data.endDateStr}`,margin,y);y+=10;doc.setLineWidth(1.5);doc.line(margin,y,595.28-margin,y);y+=15;
+  doc.autoTable({startY:y,head:[['Day','Status','Start','End','Meal','Base Hours','On-site OT','Off-site OT']],body:data.daysData.map(d=>[d.day,d.status,d.start,d.end,d.meal,d.base,d.onSite,d.offSite]),styles:{fontSize:8,cellPadding:3,lineColor:[189,189,189],lineWidth:.5},headStyles:{fillColor:[239,239,239],textColor:[34,34,34],fontStyle:'bold',halign:'center'},bodyStyles:{halign:'center'},columnStyles:{0:{halign:'left',cellWidth:75}},didParseCell:info=>{if(info.section==='body'){const r=data.daysData[info.row.index];if(r.isHighlighted)info.cell.styles.fillColor=[255,248,220];else if(r.isWeekend)info.cell.styles.fillColor=[242,242,242];}}});
+  y=doc.lastAutoTable.finalY+18;if(y>700){doc.addPage();y=margin;}const half=(595.28-margin*2-15)/2;
+  doc.autoTable({startY:y,margin:{left:margin},tableWidth:half,head:[[{content:'Weekly Totals',colSpan:4,styles:{halign:'center',fillColor:[230,230,230]}}],['Week','Base','On-site OT','Off-site OT']],body:data.weeklyData.map(w=>[w.label,w.base,w.onsite,w.offsite]),styles:{fontSize:8,cellPadding:3,lineColor:[189,189,189],lineWidth:.5,halign:'center'},headStyles:{textColor:[34,34,34],fontStyle:'bold'}});const weeklyY=doc.lastAutoTable.finalY;
+  doc.autoTable({startY:y,margin:{left:margin+half+15},tableWidth:half,head:[[{content:'Monthly Totals',colSpan:2,styles:{halign:'center',fillColor:[230,230,230]}}]],body:[['Total Base Hours',data.grandBase],['Total Overtime',data.grandOvertime],[{content:'Grand Total Hours',styles:{fontStyle:'bold'}},{content:data.grandTotal,styles:{fontStyle:'bold'}}]],styles:{fontSize:8,cellPadding:3,lineColor:[189,189,189],lineWidth:.5},headStyles:{textColor:[34,34,34],fontStyle:'bold'}});y=Math.max(weeklyY,doc.lastAutoTable.finalY)+15;
+  if(data.leaveString){if(y>750){doc.addPage();y=margin;}doc.setFontSize(8);doc.setFillColor(247,247,247);doc.setDrawColor(208,208,208);doc.rect(margin,y,595.28-margin*2,20,'FD');doc.text(`Leave Summary: ${data.leaveString}`,margin+5,y+13);y+=35;}
+  if(y>730){doc.addPage();y=margin;}y+=40;const col=(595.28-margin*2)/3,lineLen=col-20;doc.setLineWidth(.5);doc.setDrawColor(0,0,0);doc.setFontSize(8);[margin,margin+col,margin+col*2].forEach(x=>doc.line(x,y,x+lineLen,y));y+=12;const sig=data.signatures||{};doc.text(sig.employee||'Employee',margin+lineLen/2,y,{align:'center'});doc.text(sig.supervisor||'Clinical Supervisor',margin+col+lineLen/2,y,{align:'center'});doc.text(sig.authoriser||'CEO / Superintendent',margin+col*2+lineLen/2,y,{align:'center'});return doc;
 }
 
 // ============================================================
-// TEMPLATE DOWNLOAD
+// GENERATION / DOWNLOADS
 // ============================================================
-function downloadTemplate() {
-  const wb = XLSX.utils.book_new();
-
-  const persalHeaders = ['Name', 'Persal Number', 'Role', 'Appointment Date', 'Nature of Appointment', 'Overtime Group', 'Contract End'];
-  const persalExample = ['Jane Smith', '12345678', 'Medical Officer Grade 1', '2025-01-01', 'Permanent', '3.2', 'N/A'];
-  const persalWs = XLSX.utils.aoa_to_sheet([persalHeaders, persalExample]);
-  XLSX.utils.book_append_sheet(wb, persalWs, 'Persal Details');
-
-  const leaveHeaders = ['Name', 'Leave Type', 'Leave Start', 'Leave End'];
-  const leaveExamples = [['Jane Smith', 'Annual Leave', '2026-01-05', '2026-01-07']];
-  const leaveWs = XLSX.utils.aoa_to_sheet([leaveHeaders, ...leaveExamples]);
-  XLSX.utils.book_append_sheet(wb, leaveWs, 'Leave Schedule');
-
-  const rosterHeaders = ['Date', 'Day Label', 'OT Start', 'OT End', 'OT Hours', 'On-Call Name 1', 'On-Call Name 2', 'Standby', 'Senior'];
-  const rosterExamples = [['2026-01-04', 'Sun AM', '08:00', '20:00', '12:00' , 'Jane Smith', '', '', '']];
-  const rosterWs = XLSX.utils.aoa_to_sheet([rosterHeaders, ...rosterExamples]);
-  XLSX.utils.book_append_sheet(wb, rosterWs, 'Call Roster');
-
-  const holidayHeaders = ['Date', 'Classification'];
-  const holidayExamples = [['2026-01-01', 'Public Holiday']];
-  const holidayWs = XLSX.utils.aoa_to_sheet([holidayHeaders, ...holidayExamples]);
-  XLSX.utils.book_append_sheet(wb, holidayWs, 'Public Holidays');
-
-  XLSX.writeFile(wb, 'Timesheet_Upload_Template.xlsx');
+async function runGeneration(){
+  if(!parsedData){log('Check the workbook interpretation first (Step 4).','err');showLog();return;}if(selectedMonths.size===0){log('Select at least one month.','err');showLog();return;}if(selectedClinicianIds.size===0){log('Select at least one staff member.','err');showLog();return;}
+  syncProfileFromUI();const year=parseInt(document.getElementById('year-input').value,10),months=[...selectedMonths].sort((a,b)=>a-b),warnings=relevantAssignmentWarnings(year,months);
+  if(warnings.length&&!document.getElementById('allow-warnings').checked){log(`${warnings.length} relevant roster warning(s) remain. Resolve them in Step 4 or tick “Allow generation…” to proceed.`,'err');showLog();wizardUnlock(4);goToWizardStep(4);return;}
+  const btn=document.getElementById('gen-btn');btn.disabled=true;generatedTimesheets=[];document.getElementById('results-section').classList.add('hidden');document.getElementById('results-grid').innerHTML='';showLog();setProgress(3);
+  const staff=parsedData.clinicians.filter(c=>selectedClinicianIds.has(c.id)),data={...parsedData,assignments:reviewAssignments};const total=staff.length*months.length;let done=0;log(`Generating ${total} timesheet(s) for ${months.map(m=>SHORT_MONTHS[m]).join(', ')} ${year}.`,'info');
+  for(const month of months){for(const clinician of staff){try{const ts=generateTimesheetData(clinician,year,month,data,profile.hospitalName,profile.hours,profile.signatures);generatedTimesheets.push({label:`${clinician.name} — ${MONTH_NAMES[month]} ${year}`,month,year,filename:`${clinician.name} - ${String(month).padStart(2,'0')}-${year} Timesheet.pdf`,data:ts});log(`✓ ${clinician.name} — ${MONTH_NAMES[month]}`,'ok');}catch(e){log(`✗ ${clinician.name} — ${MONTH_NAMES[month]}: ${e.message}`,'err');}done++;setProgress(Math.round(3+(done/total)*97));await new Promise(r=>setTimeout(r,0));}}
+  renderResults();btn.disabled=false;log(`Generation complete — ${generatedTimesheets.length} document(s) ready.`,'info');
 }
+function renderResults(){const grid=document.getElementById('results-grid');grid.innerHTML='';generatedTimesheets.forEach((ts,i)=>{const card=document.createElement('div');card.className='result-card';card.innerHTML=`<div class="name">${escapeHtml(ts.label)}</div><button class="dl-btn" onclick="downloadPDF(${i})">↓ Download PDF</button>`;grid.appendChild(card);});document.getElementById('results-section').classList.remove('hidden');}
+function downloadPDF(i){try{const ts=generatedTimesheets[i];buildPDF(ts.data).save(ts.filename);}catch(e){log(`Error saving PDF: ${e.message}`,'err');}}
+async function downloadAllPDFs(){const btn=document.getElementById('dl-all-pdf-btn');btn.disabled=true;btn.textContent='Downloading…';for(let i=0;i<generatedTimesheets.length;i++){downloadPDF(i);await new Promise(r=>setTimeout(r,200));}btn.disabled=false;btn.textContent='Download All PDFs';}
+function setProgress(p){document.getElementById('progress-bar').classList.add('visible');document.getElementById('progress-fill').style.width=p+'%';}
+function log(msg,type='dim'){const box=document.getElementById('log-box'),p=document.createElement('p');p.className='log-line '+type;p.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;box.appendChild(p);box.scrollTop=box.scrollHeight;}
+function showLog(){document.getElementById('log-box').classList.add('visible');}
+
+// ============================================================
+// MONTHLY REPORTING TOOL
+// ============================================================
+function hhmmToDecimal(str){if(!str)return 0;const p=str.split(':');return (+p[0]||0)+(+p[1]||0)/60+(+p[2]||0)/3600;}function decimalToExcelTime(h){return h/24;}
+function extractWeeklyHours(tsData){const byWeek={};(tsData.weeklyData||[]).forEach(w=>byWeek[parseInt(w.label.replace('Week ',''),10)]=w);const weeks=[];for(let i=1;i<=6;i++){const w=byWeek[i];weeks.push(w?{normalHrs:hhmmToDecimal(w.base),otHrs:hhmmToDecimal(w.onsite)+hhmmToDecimal(w.offsite)}:{normalHrs:0,otHrs:0});}return weeks;}
+function buildReportingExcel(monthTimesheets,monthName,year){
+  const wb=XLSX.utils.book_new(),COL_COUNT=27,rows=[],header=new Array(COL_COUNT).fill('');['No.','Surname & Initials','Persal no.','Job title','Pay point','Placement (home body)','Nature of appointment','Appointment date','Contract end date','Reporting month','COT Group','Week 1 Normal hrs','Week 1 Overtime hrs','Week 2 Normal hrs','Week 2 Overtime hrs','Week 3 Normal hrs','Week 3 Overtime hrs','Week 4 Normal hrs','Week 4 Overtime hrs','Week 5 Normal hrs','Week 5 Overtime hrs','Week 6 Normal hrs','Week 6 Overtime hrs','Total Normal Hours','Total Overtime Hours','Type of leave','No of days taken'].forEach((v,i)=>header[i]=v);rows.push(header);
+  monthTimesheets.forEach((ts,idx)=>{const d=ts.data,weeks=extractWeeklyHours(d),normal=weeks.reduce((s,w)=>s+w.normalHrs,0),ot=weeks.reduce((s,w)=>s+w.otHrs,0),r=new Array(COL_COUNT).fill('');r[0]=idx+1;r[1]=d.clinicianName;r[2]=d.clinicianId;r[3]=d.rank;r[4]=d.hospitalName;r[5]=d.hospitalName;r[6]=d.apptNature;r[7]=d.apptDate;r[8]=d.contractEnd;r[9]=`${monthName} ${year}`;r[10]=d.overtimeGroup;for(let w=0;w<6;w++){r[11+w*2]=weeks[w].normalHrs>0?decimalToExcelTime(weeks[w].normalHrs):'';r[12+w*2]=weeks[w].otHrs>0?decimalToExcelTime(weeks[w].otHrs):'';}r[23]=normal>0?decimalToExcelTime(normal):'';r[24]=ot>0?decimalToExcelTime(ot):'';r[25]=d.leaveString||'';r[26]=d.totalLeaveDays||'';rows.push(r);});
+  const ws=XLSX.utils.aoa_to_sheet(rows),timeCols=[11,12,13,14,15,16,17,18,19,20,21,22,23,24];for(let r=1;r<rows.length;r++)for(const c of timeCols){const ref=XLSX.utils.encode_cell({r,c});if(ws[ref]&&ws[ref].v!==''){ws[ref].t='n';ws[ref].z='[h]:mm:ss';}}XLSX.utils.book_append_sheet(wb,ws,monthName.substring(0,31));const filename=`COT_Reporting_Tool_${monthName}_${year}.xlsx`;XLSX.writeFile(wb,filename);return filename;
+}
+function runReportingExport(){
+  syncProfileFromUI();if(!profile.reportingEnabled){log('Reporting export is disabled in Advanced output settings.','err');showLog();return;}if(!generatedTimesheets.length){log('Generate timesheets first.','err');showLog();return;}
+  const byMonth={};generatedTimesheets.forEach(ts=>(byMonth[MONTH_NAMES[ts.month]]??=[]).push(ts));const grid=document.getElementById('report-results-grid');grid.innerHTML='';document.getElementById('report-results-section').classList.remove('hidden');
+  Object.entries(byMonth).forEach(([mn,list])=>{list.sort((a,b)=>a.data.clinicianName.localeCompare(b.data.clinicianName));try{const filename=buildReportingExcel(list,mn,list[0].year);const card=document.createElement('div');card.className='result-card';card.innerHTML=`<div class="name">📊 ${escapeHtml(filename)}</div>`;grid.appendChild(card);log(`✓ Reporting tool exported: ${filename}`,'ok');}catch(e){log(`✗ Reporting export failed for ${mn}: ${e.message}`,'err');}});showLog();
+}
+
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('bulk-match-modal')?.classList.contains('visible'))resolveBulkMatch('cancel');});
+document.getElementById('bulk-match-modal').addEventListener('click',e=>{if(e.target.id==='bulk-match-modal')resolveBulkMatch('cancel');});
+
+// ============================================================
+// STANDARD TEMPLATE
+// ============================================================
+function downloadTemplate(){
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Name','Persal Number','Role','Appointment Date','Nature of Appointment','Overtime Group','Contract End'],['Jane Smith','12345678','Medical Officer Grade 1','2026-01-01','Permanent','3.2','']]),'Persal Details');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Name','Leave Type','Leave Start','Leave End'],['Jane Smith','Annual Leave','2026-08-03','2026-08-05']]),'Leave Schedule');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Date','Day Label','OT Start','OT End','OT Hours','On-Call Name 1','On-Call Name 2','Standby','Senior'],['2026-08-04','Tue','16:30','07:30','15:00','Jane Smith','','','']]),'Call Roster');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Date','Classification'],['2026-08-09','Public Holiday']]),'Public Holidays');
+  XLSX.writeFile(wb,'Timesheet_Upload_Template.xlsx');
+}
+
+init();
 </script>
 </body>
 </html>
